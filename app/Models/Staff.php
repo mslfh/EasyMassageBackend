@@ -14,7 +14,7 @@ class Staff extends Model
 
     protected $guarded = ['id'];
 
-    protected $appends = ['profile_photo_url','email','phone'];
+    protected $appends = ['email','phone'];
 
     protected $hidden = [
         'deleted_at',
@@ -22,11 +22,11 @@ class Staff extends Model
         'updated_at',
     ];
 
-    public function getProfilePhotoUrlAttribute()
-    {
-        return $this->profile_photo_path ? asset('storage/' . $this->profile_photo_path	) :
-         null;
-    }
+    // public function getProfilePhotoUrlAttribute()
+    // {
+    //     return $this->profile_photo_path ? asset('storage/' . $this->profile_photo_path	) :
+    //      null;
+    // }
 
     public function getEmailAttribute()
     {

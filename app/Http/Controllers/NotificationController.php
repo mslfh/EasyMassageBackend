@@ -3,15 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Services\NotificationService;
+use App\Services\SmsService;
 use Illuminate\Http\Request;
 
 class NotificationController extends BaseController
 {
     protected $notificationService;
+    protected $smsService;
 
-    public function __construct(NotificationService $notificationService)
+    public function __construct(NotificationService $notificationService,SmsService $smsService)
     {
         $this->notificationService = $notificationService;
+        $this->smsService = $smsService;
     }
 
     public function index()
@@ -65,4 +68,22 @@ class NotificationController extends BaseController
         $this->notificationService->deleteNotification($id);
         return response()->json(null, 204);
     }
+
+    public function getNotification(Request $request )
+    {
+        $beginDate = $request->input('begin_date');
+        $endDate = $request->input('end_date');
+
+        return response()->json(
+            $this->notificationService->getNotificationByDateRange($beginDate, $endDate)
+        );
+    }
+
+    public function getSmsBalance(Request $request)
+    {
+        return response()->json(
+            $this->smsService->getBalance()
+        );
+    }
+
 }

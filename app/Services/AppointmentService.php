@@ -4,6 +4,17 @@ namespace App\Services;
 
 use App\Contracts\AppointmentContract;
 use App\Models\Appointment;
+use App\Models\Service;
+use App\Services\ServiceAppointmentService;
+use App\Services\UserService;
+use App\Services\StaffService;
+use App\Services\SmsService;
+use App\Services\SystemSettingService;
+use App\Services\NotificationService;
+use App\Services\AppointmentLogService;
+use App\Services\OrderService;
+use Illuminate\Support\Facades\DB;
+
 
 class AppointmentService
 {
@@ -14,7 +25,8 @@ class AppointmentService
     protected $systemSettingService;
     protected $smsService;
     protected $notificationService;
-    protected $orderService;
+    protected $appointmentLogService;
+
     public function __construct(
         AppointmentContract $appointmentRepository,
         ServiceAppointmentService $serviceAppointmentService,
@@ -23,7 +35,7 @@ class AppointmentService
         SmsService $smsService,
         SystemSettingService $systemSettingService,
         NotificationService $notificationService,
-        OrderService $orderService
+        AppointmentLogService $appointmentLogService
     ) {
         $this->appointmentRepository = $appointmentRepository;
         $this->serviceAppointmentService = $serviceAppointmentService;
@@ -32,7 +44,8 @@ class AppointmentService
         $this->smsService = $smsService;
         $this->systemSettingService = $systemSettingService;
         $this->notificationService = $notificationService;
-        $this->orderService = $orderService;
+        $this->appointmentLogService = $appointmentLogService;
+
     }
 
     public function getAllAppointments()
@@ -143,17 +156,17 @@ class AppointmentService
         try {
             $appointment = $this->createAppointment($appointmentData);
             foreach ($data['customer_service'] as $serviceData) {
-                $service = \App\Models\Service::with('package')->findOrFail($serviceData['service']['id']);
-                $serviceData['service_id'] = $service->id;
-                $serviceData['staff_id'] = $service->staff_id;
-                $serviceData['package_id'] = $service->package_id;
-                $serviceData['package_title'] = $service->package->title;
-                $serviceData['package_hint'] = $service->package->hint;
-                $serviceData['service_id'] = $service->id;
-                $serviceData['service_title'] = $service->title;
-                $serviceData['service_description'] = $service->description;
-                $serviceData['service_duration'] = $service->duration;
-                $serviceData['service_price'] = $service->price;
+                $service = Service::with('package')->findOrFail($serviceData['service']['id']);
+                $serviceData['service_id'] = $service->id ?? null;
+                $serviceData['staff_id'] = $service->staff_id ?? null;
+                $serviceData['package_id'] = $service->package_id ?? null;
+                $serviceData['package_title'] = $service->package->title ?? null;
+                $serviceData['package_hint'] = $service->package->hint ?? null;
+                $serviceData['service_id'] = $service->id ?? null;
+                $serviceData['service_title'] = $service->title ?? null;
+                $serviceData['service_description'] = $service->description ?? null;
+                $serviceData['service_duration'] = $service->duration ?? null;
+                $serviceData['service_price'] = $service->price ?? null;
                 $serviceData['appointment_id'] = $appointment->id;
                 $serviceData['booking_time'] = $appointment->booking_time;
                 if ($serviceData["staff"]['id'] == 0) {
@@ -174,9 +187,18 @@ class AppointmentService
                 }
                 $this->createServiceAppointment($serviceData);
             }
-            $this->orderService->initAppointmentOrder($appointment->id, $appointment->amount);
+            app(OrderService::class)->initAppointmentOrder($appointment->id, $appointment->amount);
             // send notification sms
             $this->sendAppointmentSms($appointment->customer_phone, $appointment->booking_time, $serviceData);
+
+            // Log the appointment creation by staff
+            $this->appointmentLogService->logAppointmentBooked(
+                $appointment->id,
+                true,
+                $serviceData['service_title'] . ' at ' . $appointment->booking_time,
+                $serviceData['staff_name']
+            );
+
             \DB::commit();
             return $appointment->load('services');
         } catch (\Exception $e) {
@@ -223,11 +245,11 @@ class AppointmentService
             }
             $appointment = $this->createAppointment($appointmentData);
             foreach ($data['customer_service'] as $serviceData) {
-                $service = \App\Models\Service::with('package')->findOrFail($serviceData['service_id']);
-                $serviceData['package_id'] = $service->package_id;
-                $serviceData['package_title'] = $service->package->title;
-                $serviceData['package_hint'] = $service->package->hint;
-                $serviceData['service_id'] = $service->id;
+                $service = Service::with('package')->findOrFail($serviceData['service_id']);
+                $serviceData['package_id'] = $service->package_id ?? null;
+                $serviceData['package_title'] = $service->package->title ?? null;
+                $serviceData['package_hint'] = $service->package->hint ?? null;
+                $serviceData['service_id'] = $service->id ?? null;
                 $serviceData['service_title'] = $service->title;
                 $serviceData['service_description'] = $service->description;
                 $serviceData['service_duration'] = $service->duration;
@@ -252,10 +274,19 @@ class AppointmentService
                 $this->createServiceAppointment($serviceData);
             }
             // create following order
-            $this->orderService->initAppointmentOrder($appointment->id, $appointment->amount);
+            app(OrderService::class)->initAppointmentOrder($appointment->id, $appointment->amount);
             \DB::commit();
             // send notification sms
             $this->sendAppointmentSms($appointment->customer_phone, $appointment->booking_time, $serviceData);
+
+            // Log the appointment creation by customer
+            $this->appointmentLogService->logAppointmentBooked(
+                $appointment->id,
+                false,
+                $serviceData['service_title'] . ' at ' . $appointment->booking_time,
+                $serviceData['staff_name']
+            );
+
             return $appointment->load('services');
         } catch (\Exception $e) {
             \DB::rollBack();
@@ -302,6 +333,10 @@ class AppointmentService
         }
         $appointment->status = 'cancelled';
         $appointment->save();
+
+        // Log the appointment cancellation
+        $this->appointmentLogService->logAppointmentCancelled($id);
+
         return $appointment;
     }
 
@@ -362,14 +397,14 @@ class AppointmentService
         $serviceAppointment = $appointment->services->first();
         if (isset($inputService['id'])) {
             if ($serviceAppointment->id != $inputService['id']) {
-                $service = \App\Models\Service::with('package')->findOrFail($inputService['id']);
-                $serviceData['service_id'] = $service->id;
-                $serviceData['package_id'] = $service->package_id;
-                $serviceData['package_title'] = $service->package->title;
-                $serviceData['package_hint'] = $service->package->hint;
-                $serviceData['service_id'] = $service->id;
-                $serviceData['service_title'] = $service->title;
-                $serviceData['service_description'] = $service->description;
+                $service = Service::with('package')->findOrFail($inputService['id']);
+                $serviceData['service_id'] = $service->id ?? null;
+                $serviceData['package_id'] = $service->package_id ?? null;
+                $serviceData['package_title'] = $service->package->title ?? null;
+                $serviceData['package_hint'] = $service->package->hint ?? null;
+
+                $serviceData['service_title'] = $service->title ?? null;
+                $serviceData['service_description'] = $service->description ?? null;
                 $serviceData['service_duration'] = $service->duration;
                 $serviceData['service_price'] = $service->price;
             }
@@ -384,6 +419,14 @@ class AppointmentService
             $serviceData['customer_name'] = $appointmentData['customer_name'];
         }
         $this->serviceAppointmentService->updateServiceAppointment($serviceAppointment->id, $serviceData);
+
+        //Log the appointment update
+        $this->appointmentLogService->logAppointmentUpdated(
+            $id,
+            $serviceData['service_title'] . ' at ' . $serviceData['booking_time'] ,
+            $serviceData['staff_name']
+        );
+
         return $this->updateAppointment($id, $appointmentData);
     }
 
@@ -458,7 +501,7 @@ class AppointmentService
                 );
                 if ($smsResponse) {
                     $serviceData['phone_number'] = $phone;
-                    $this->notificationService->createBookingNotification($smsResponse, $serviceData, 'Appintment Reminder');
+                    $this->notificationService->createBookingNotification($smsResponse, $serviceData, 'Appointment Reminder scheduled');
                 }
             }
         }
@@ -496,6 +539,9 @@ class AppointmentService
             $service->save();
         });
         $appointment->save();
+        // Log the appointment no-show
+        $this->appointmentLogService->logAppointmentNoShow($id);
+
         return $appointment;
     }
 
@@ -503,12 +549,26 @@ class AppointmentService
     {
         $today = \Carbon\Carbon::today()->format('Y-m-d');
         //Test date 02/06/2025
-        // $today = \Carbon\Carbon::createFromFormat('Y-m-d', '2025-06-03');
+        // $today = \Carbon\Carbon::createFromFormat('Y-m-d', '2025-07-10');
+        //Fetch the current week appointments
+        $weekBegin = \Carbon\Carbon::parse($today)->startOfWeek();
+        $weekEnd = \Carbon\Carbon::parse($today)->endOfWeek();
+
+        $weekAppointments = $this->appointmentRepository->getStatisticsByDate($weekBegin, $weekEnd);
+        //Group appointments count of every day in the week
+        $weekAppointmentsCount = [];
+        for ($i = 0; $i < 7; $i++) {
+            $date = $weekBegin->copy()->addDays($i)->format('Y-m-d');
+            $weekAppointmentsCount[] = $weekAppointments->filter(function ($appointment) use ($date) {
+                return \Carbon\Carbon::parse($appointment->booking_time)->format('Y-m-d') === $date;
+            })->count();
+        }
 
         $appointments = $this->appointmentRepository->getStatisticsByDate($today, $today);
 
         if ($appointments->isEmpty()) {
             return [
+                'weekAppointmentsCount' => $weekAppointmentsCount,
             ];
         }
         $totalAppointments = $appointments->count();
@@ -528,44 +588,49 @@ class AppointmentService
 
         $amountGroupedByPaymentMethod = [];
         foreach ($orders as $order) {
+            if (!isset($order->payment_method)) {
+                continue;
+            }
             $paymentMethod = $order->payment_method;
             if ($paymentMethod == 'split_payment') {
                 $splitPayments = $order->payment()->get();
                 foreach ($splitPayments as $splitPayment) {
                     $paymentMethod = $splitPayment->paid_by;
                     if (!isset($amountGroupedByPaymentMethod[$paymentMethod])) {
-                        if( $splitPayment->paid_by === 'unpaid') {
-                            $amountGroupedByPaymentMethod[$paymentMethod] = $splitPayment->total_amount;
+                        if ($splitPayment->paid_by === 'unpaid') {
+                            $amountGroupedByPaymentMethod[$paymentMethod] = (float) number_format($splitPayment->total_amount, 2, '.', '');
                         } else {
-                            $amountGroupedByPaymentMethod[$paymentMethod] = $splitPayment->paid_amount;
+                            $amountGroupedByPaymentMethod[$paymentMethod] = (float) number_format($splitPayment->paid_amount, 2, '.', '');
                         }
-                    }
-                    else {
-                        if( $splitPayment->paid_by === 'unpaid') {
-                            $amountGroupedByPaymentMethod[$paymentMethod] += $splitPayment->total_amount;
+                    } else {
+                        if ($splitPayment->paid_by === 'unpaid') {
+                            $amountGroupedByPaymentMethod[$paymentMethod] += (float) number_format($splitPayment->total_amount, 2, '.', '');
                         } else {
-                            $amountGroupedByPaymentMethod[$paymentMethod] += $splitPayment->paid_amount;
+                            $amountGroupedByPaymentMethod[$paymentMethod] += (float) number_format($splitPayment->paid_amount, 2, '.', '');
                         }
+                        $amountGroupedByPaymentMethod[$paymentMethod] = (float) number_format($amountGroupedByPaymentMethod[$paymentMethod], 2, '.', '');
                     }
                 }
             } else {
                 if (!isset($amountGroupedByPaymentMethod[$paymentMethod])) {
                     if ($order->payment_method === 'unpaid') {
-                        $amountGroupedByPaymentMethod[$paymentMethod] = $order->total_amount;
+                        $amountGroupedByPaymentMethod[$paymentMethod] = (float) number_format($order->total_amount, 2, '.', '');
                     } else {
-                        $amountGroupedByPaymentMethod[$paymentMethod] = $order->paid_amount;
+                        $amountGroupedByPaymentMethod[$paymentMethod] = (float) number_format($order->paid_amount, 2, '.', '');
                     }
                 } else {
                     if ($order->payment_method === 'unpaid') {
-                        $amountGroupedByPaymentMethod[$paymentMethod] += $order->total_amount;
+                        $amountGroupedByPaymentMethod[$paymentMethod] += (float) number_format($order->total_amount, 2, '.', '');
                     } else {
-                        $amountGroupedByPaymentMethod[$paymentMethod] += $order->paid_amount;
+                        $amountGroupedByPaymentMethod[$paymentMethod] += (float) number_format($order->paid_amount, 2, '.', '');
                     }
+                    $amountGroupedByPaymentMethod[$paymentMethod] = (float) number_format($amountGroupedByPaymentMethod[$paymentMethod], 2, '.', '');
                 }
             }
         }
 
         return [
+            'weekAppointmentsCount' => $weekAppointmentsCount,
             'total_appointments' => $totalAppointments,
             'total_revenue' => $totalAmount,
             'total_paid' => $paidAmount,

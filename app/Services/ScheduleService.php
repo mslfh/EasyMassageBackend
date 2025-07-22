@@ -7,25 +7,23 @@ use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use App\Services\ServiceAppointmentService;
 use App\Services\StaffService;
+use App\Services\AppointmentService;
 
 class ScheduleService
 {
     protected $scheduleRepository;
     protected $serviceAppointmentService;
-    protected $appointmentService;
     protected $staffService;
 
 
     public function __construct(
         ScheduleContract $scheduleRepository,
         ServiceAppointmentService $serviceAppointmentService,
-        AppointmentService $appointmentService,
         StaffService $staffService
 
     ) {
         $this->scheduleRepository = $scheduleRepository;
         $this->serviceAppointmentService = $serviceAppointmentService;
-        $this->appointmentService = $appointmentService;
         $this->staffService = $staffService;
     }
 
@@ -438,7 +436,7 @@ class ScheduleService
         });
 
         // Get existing appointments
-        $existingAppointments = $this->appointmentService->getAllAppointments()->groupBy(function ($schedule) {
+        $existingAppointments = app(AppointmentService::class)->getAllAppointments()->groupBy(function ($schedule) {
             return Carbon::parse($schedule->booking_time)->format('Y-m-d');
         })->map(function ($appointments) {
             return $appointments->count();

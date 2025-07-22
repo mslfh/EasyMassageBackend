@@ -37,7 +37,9 @@ class AppointmentController extends BaseController
         $phone = $request->query('phone');
 
         return response()->json($this->appointmentService->getUserBookingHistory(
-            $userId, $phone));
+            $userId,
+            $phone
+        ));
     }
 
     public function show($id)
@@ -157,10 +159,10 @@ class AppointmentController extends BaseController
 
     public function destroy($id)
     {
-          return response()->json($this->appointmentService->deleteAppointment($id));
+        return response()->json($this->appointmentService->deleteAppointment($id));
     }
 
-    public function makeNoShow( Request $request)
+    public function makeNoShow(Request $request)
     {
         $data = $request->validate([
             'id' => 'required|integer|exists:appointments,id',
@@ -168,14 +170,16 @@ class AppointmentController extends BaseController
         return response()->json($this->appointmentService->markAppointmentAsNoShow($data['id']));
     }
 
-    public function getTodayStatistics( )
+    public function getTodayStatistics()
     {
         return response()->json($this->appointmentService->getTodayStatistics());
     }
 
-    public function getTotalStatistics( )
+    public function getTotalStatistics()
     {
-        return response()->json($this->appointmentService->getTotalStatistics());
+        $beginDate = request()->query('beginDate', null);
+        $endDate = request()->query('endDate', null);
+        return response()->json($this->appointmentService->getTotalStatistics($beginDate, $endDate));
     }
 
 }

@@ -19,8 +19,8 @@ return [
 
     'allowed_methods' => ['*'],  // 允许所有HTTP方法
 
-    'allowed_origins' => [env('FRONTEND_URL', 'http://localhost:9000')],  // 允许的前端地址
-    // 'allowed_origins' => ['*'],  // 允许的前端地址
+    // 'allowed_origins' => [env('FRONTEND_URL', 'http://localhost:9000')],  // 允许的前端地址
+    'allowed_origins' => ['*'],  // 允许的前端地址
 
     'allowed_origins_patterns' => [],
 

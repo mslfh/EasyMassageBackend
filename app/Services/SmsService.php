@@ -23,4 +23,9 @@ class SmsService
         //容错
         return $this->smsRepository->sendSms($message, $phone_number,$schedule_time);
     }
+
+    public function getBalance()
+    {
+        return $this->smsRepository->getBalance();
+    }
 }

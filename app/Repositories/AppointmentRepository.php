@@ -11,6 +11,7 @@ class AppointmentRepository implements AppointmentContract
     {
         return Appointment::all()->load('services');
     }
+
     public function getByDate($date)
     {
         return Appointment::whereDate('booking_time', $date)
@@ -30,7 +31,7 @@ class AppointmentRepository implements AppointmentContract
             'type',
             ['break','no_show']
         )
-        ->with('order.payment')->orderBy('booking_time')->get();
+        ->with('order.payment')->get();
     }
 
     public function getUserBookingHistory($userId, $phone = null)

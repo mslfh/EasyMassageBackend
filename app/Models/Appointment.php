@@ -22,6 +22,11 @@ class Appointment extends Model
         return $this->hasOne(Order::class);
     }
 
+    public function logs()
+    {
+        return $this->hasMany(AppointmentLog::class);
+    }
+
     public function getAmountAttribute()
     {
         return $this->services->sum('service_price');

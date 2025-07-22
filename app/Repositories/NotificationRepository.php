@@ -35,4 +35,12 @@ class NotificationRepository implements NotificationContract
         $notification->delete();
         return true;
     }
+
+    public function getNotificationByDateRange($beginDate, $endDate)
+    {
+        return Notification::select('id','appointment_id', 'recipient_name', 'recipient_phone', 'subject', 'content', 'status', 'schedule_time')
+            ->whereDate('created_at', '>=', $beginDate)
+            ->whereDate('created_at', '<=', $endDate)
+            ->get();
+    }
 }

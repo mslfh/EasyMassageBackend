@@ -14,6 +14,9 @@ use App\Http\Controllers\ServiceAppointmentController;
 use App\Http\Controllers\SystemSettingController;
 use App\Http\Controllers\UserProfileController;
 use App\Http\Controllers\VoucherController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\AppointmentLogController;
+
 
 // Authentication routes
 Route::post('/login', [AuthController::class, 'login']);
@@ -43,7 +46,7 @@ Route::get('/get-unavailable-time-from-staff', [ScheduleController::class, 'getU
 
 // Appointment routes
 Route::post('/make-appointment', [AppointmentController::class, 'makeAppointment']);
-Route::get('/appointments', [AppointmentController::class, 'index']);
+
 Route::get('/appointments/{id}', [AppointmentController::class, 'show']);
 Route::get('/getServiceAppointments/{id}', [AppointmentController::class, 'getServiceAppointments']);
 
@@ -69,12 +72,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/getStaffSchedule', [ScheduleController::class, 'getStaffSchedule']);
 
     // Appointment management
-    Route::apiResource('appointments', AppointmentController::class)->except(['index', 'show']);
-    Route::get('/getBookedServiceByDate', [AppointmentController::class, 'getBookedServiceByDate']);
+    Route::apiResource('appointments', AppointmentController::class)->except(['show']);
     Route::post('/takeBreakAppointment', [AppointmentController::class, 'takeBreakAppointment']);
     Route::get('/getUserBookingHistory', [AppointmentController::class, 'getUserBookingHistory']);
     Route::post('/sendSms', [AppointmentController::class, 'sendSms']);
     Route::post('/appointments/mark-no-show', [AppointmentController::class, 'makeNoShow']);
+    Route::get('/getBookedServiceByDate', [AppointmentController::class, 'getBookedServiceByDate']);
 
     // Order management
     Route::apiResource('orders', OrderController::class);
@@ -82,10 +85,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/orders/finishOrder', [OrderController::class, 'finishOrder']);
 
     // Schedule history management
-    Route::apiResource('schedule-histories', ScheduleHistoryController::class);
+    Route::apiResource('/schedule-histories', ScheduleHistoryController::class);
 
     // Service appointment management
-    Route::apiResource('service-appointments', ServiceAppointmentController::class);
+    Route::apiResource('/service-appointments', ServiceAppointmentController::class);
+
+    // Appointment log management
+    Route::get('/appointment-logs', [AppointmentLogController::class, 'getLogsByDateRange']);
 
     // Staff management
     Route::apiResource('staff', StaffController::class)->except(['index', 'show']);
@@ -101,9 +107,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Voucher management
     Route::apiResource('vouchers', VoucherController::class);
-    Route::post('vouchers/bulk', [VoucherController::class, 'bulkStore']);
-    Route::post('vouchers/verify', [VoucherController::class, 'verify']);
-    Route::post('vouchers/verifyValidCode', [VoucherController::class, 'verifyValidCode']);
+    Route::post('/vouchers/bulk', [VoucherController::class, 'bulkStore']);
+    Route::post('/vouchers/verify', [VoucherController::class, 'verify']);
+    Route::post('/vouchers/verifyValidCode', [VoucherController::class, 'verifyValidCode']);
 
     // System settings
     Route::apiResource('system-setting', SystemSettingController::class);
@@ -113,6 +119,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/getTodayStatistics', [AppointmentController::class, 'getTodayStatistics']);
     Route::get('/getStaffIncomeStatistics', [StaffController::class, 'getStaffIncomeStatistics']);
     Route::get('/getTotalStatistics', [AppointmentController::class, 'getTotalStatistics']);
+
+    //notification
+    Route::get('/getNotification', [NotificationController::class, 'getNotification']);
+    Route::get('/getSmsBalance', [NotificationController::class, 'getSmsBalance']);
 });
 
 Route::get('/phpinfo', function () {

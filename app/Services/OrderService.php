@@ -3,14 +3,24 @@
 namespace App\Services;
 use App\Contracts\OrderContract;
 use App\Models\Order;
+use App\Services\AppointmentService;
+use App\Services\VoucherService;
+use DB;
 
 class OrderService
 {
     protected $orderRepository;
+    protected $appointmentService;
+    protected $voucherService;
+    protected $appointmentLogService;
 
-    public function __construct(OrderContract $orderRepository)
+
+    public function __construct(OrderContract $orderRepository, AppointmentService $appointmentService, VoucherService $voucherService, AppointmentLogService $appointmentLogService)
     {
         $this->orderRepository = $orderRepository;
+        $this->appointmentService = $appointmentService;
+        $this->voucherService = $voucherService;
+        $this->appointmentLogService = $appointmentLogService;
     }
 
     public function getAllOrders()
@@ -21,11 +31,6 @@ class OrderService
     public function getOrderById($id)
     {
         return $this->orderRepository->getOrderById($id);
-    }
-
-    public function getOrderByDate($date)
-    {
-        return $this->orderRepository->getOrderByDate($date);
     }
 
     public function getOrderByAppointment($appointmentId)
@@ -86,14 +91,88 @@ class OrderService
         $this->createOrder($data);
     }
 
-    public function finishOrder($appointmentId, $total_amount)
+    public function finishOrder(array $data)
     {
-        $data = [
-            'status' => 'pending',
-            'appointment_id' => $appointmentId,
-            'payment_method' => 'unpaid',
-            'total_amount' => $total_amount,
-        ];
-        $this->createOrder($data);
+        // get the appointment
+        $appointment = $this->appointmentService->getAppointmentById($data['appointment_id']);
+
+        if (!$appointment) {
+            throw new \Exception('Appointment not found', 404);
+        }
+
+        if ($data['payment_method'] == 'unpaid') {
+            $data['payment_status'] = 'pending';
+        } else if ($data['payment_method'] == 'split_payment' && $data['order_status'] == 'pending') {
+            $data['payment_status'] = 'partially_paid';
+        } else {
+            $data['payment_status'] = 'paid';
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $appointment->status = 'finished';
+            $appointment->actual_start_time = $data['actual_start_time'];
+            $appointment->actual_end_time = $data['actual_end_time'];
+            $appointment->save();
+
+            if (isset($data['voucher_code'])) {
+                $voucherData = $this->voucherService->verifyVoucher($data['voucher_code']);
+                if ($voucherData['status'] == 'error') {
+                    throw new \Exception($voucherData['message'], 400);
+                }
+                $voucher = $voucherData['data'];
+                if ($voucher->remaining_amount < $data['total_amount']) {
+                    $voucher->remaining_amount = 0;
+                } else {
+                    $voucher->remaining_amount -= $data['total_amount'];
+                }
+                $voucher->save();
+                $data['payment_note'] = $data['payment_note'] . '  Voucher Code: ' . $voucher->code;
+            }
+
+            if ($data['split_payment']) {
+                $payment = [];
+                foreach ($data['split_payment'] as $index => $split_payment) {
+                    $payment[$index]['paid_by'] = $split_payment['method']['value'];
+                    if ($split_payment['method']['label'] != 'Unpaid') {
+                        $payment[$index]['status'] = 'Paid';
+                        $payment[$index]['paid_amount'] = $split_payment['amount'];
+                    } else {
+                        $payment[$index]['status'] = 'Unpaid';
+                        $payment[$index]['paid_amount'] = 0;
+                    }
+                    $payment[$index]['total_amount'] = $split_payment['amount'];
+                    $payment[$index]['remark'] = $data['payment_note'];
+                }
+                $data['payment'] = $payment;
+                unset($data['split_payment']);
+            }
+
+            unset($data['actual_start_time']);
+            unset($data['actual_end_time']);
+
+            if ($appointment->order) {
+                $order = $this->updateOrder($appointment->order->id, $data);
+            } else {
+                $data['appointment_id'] = $appointment->id;
+                $order = $this->createOrder($data);
+            }
+
+            // Log the appointment status change
+            $this->appointmentLogService->logCheckedOut(
+                $appointment->id,
+                $data['paid_amount'] ?? 0,
+                $data['payment_method'] ?? 'unpaid',
+                $data['payment_note'] ?? '',
+                isset($data['voucher_code']) ? $data['voucher_code'] : null
+            );
+
+            DB::commit();
+            return $order;
+        } catch (\Exception $e) {
+            DB::rollback();
+            throw $e;
+        }
     }
 }

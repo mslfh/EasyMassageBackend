@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Services\OrderService;
 use App\Services\AppointmentService;
 use App\Services\VoucherService;
-use DB;
 use Illuminate\Http\Request;
 
 class OrderController extends BaseController
@@ -133,76 +132,13 @@ class OrderController extends BaseController
             'split_payment' => 'nullable',
             'voucher_code' => 'nullable|string',
         ]);
-        // get the appointment
-        $appointment = $this->appointmentService->getAppointmentById($data['appointment_id']);
 
-        if (!$appointment) {
-            return response()->json(['message' => 'Appointment not found'], 404);
+        try {
+            $order = $this->orderService->finishOrder($data);
+            return response()->json($order, 201);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], $e->getCode() ?: 500);
         }
-
-        // // check if the appointment is already paid
-        // if ($appointment->status == 'finished') {
-        //     return response()->json(['message' => 'Appointment already done'], 400);
-        // }
-
-        if ($data['payment_method'] == 'unpaid') {
-            $data['payment_status'] = 'pending';
-        } else if ($data['payment_method'] == 'split_payment' && $data['order_status'] == 'pending') {
-            $data['payment_status'] = 'partially_paid';
-        } else {
-            $data['payment_status'] = 'paid';
-        }
-        DB::beginTransaction();
-        $appointment->status = 'finished';
-        $appointment->actual_start_time = $data['actual_start_time'];
-        $appointment->actual_end_time = $data['actual_end_time'];
-        $appointment->save();
-
-         if (isset($data['voucher_code'])) {
-            $voucherData = $this->voucherService->verifyVoucher($data['voucher_code']);
-            if ($voucherData['status'] == 'error') {
-                return response()->json(['message' => $voucherData['message']], 400);
-            }
-            $voucher = $voucherData['data'];
-            if ($voucher->remaining_amount < $data['total_amount']) {
-                $voucher->remaining_amount = 0;
-            }
-            else{
-                $voucher->remaining_amount -= $data['total_amount'];
-            }
-            $voucher->save();
-            $data['payment_note'] = $data['payment_note'] . '  Voucher Code: ' . $voucher->code;
-        }
-
-        if ($data['split_payment']) {
-            $payment = [];
-            foreach ($data['split_payment'] as $index => $split_payment) {
-                $payment[$index]['paid_by'] = $split_payment['method']['value'];
-                if ($split_payment['method']['label'] != 'Unpaid') {
-                    $payment[$index]['status'] = 'Paid';
-                    $payment[$index]['paid_amount'] = $split_payment['amount'];
-                } else {
-                    $payment[$index]['status'] = 'Unpaid';
-                    $payment[$index]['paid_amount'] = 0;
-                }
-                $payment[$index]['total_amount'] = $split_payment['amount'];
-                $payment[$index]['remark'] = $data['payment_note'];
-            }
-            $data['payment'] = $payment;
-            unset($data['split_payment']);
-        }
-
-        unset($data['actual_start_time']);
-        unset($data['actual_end_time']);
-        if($appointment->order) {
-            $order = $this->orderService->updateOrder($appointment->order->id, $data);
-        }
-        else {
-            $data['appointment_id'] = $appointment->id;
-            $order = $this->orderService->createOrder($data);
-        }
-        DB::commit();
-        return response()->json($order, 201);
     }
 
     public function update(Request $request, $id)

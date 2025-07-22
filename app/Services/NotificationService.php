@@ -8,9 +8,12 @@ class NotificationService
 {
     protected $notificationRepository;
 
-    public function __construct(NotificationContract $notificationRepository)
+     protected $appointmentLogService;
+
+    public function __construct(NotificationContract $notificationRepository, AppointmentLogService $appointmentLogService)
     {
         $this->notificationRepository = $notificationRepository;
+        $this->appointmentLogService = $appointmentLogService;
     }
 
     public function getAllNotifications()
@@ -58,6 +61,11 @@ class NotificationService
                 'error_message' => $smsResponse->meta->status !== 'SUCCESS' ? $smsResponse->msg : null,
             ];
         }
+
+        // Log the notification creation
+        $this->appointmentLogService->logMessageSent($serviceData['appointment_id'],
+            $smsResponse->meta->status === 'SUCCESS',$subject );
+
         return $this->notificationRepository->create($data);
     }
 
@@ -69,5 +77,10 @@ class NotificationService
     public function deleteNotification($id)
     {
         return $this->notificationRepository->delete($id);
+    }
+
+    public function getNotificationByDateRange($beginDate, $endDate)
+    {
+        return $this->notificationRepository->getNotificationByDateRange($beginDate, $endDate);
     }
 }

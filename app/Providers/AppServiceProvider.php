@@ -32,6 +32,25 @@ use App\Repositories\NotificationRepository;
 use App\Contracts\UserProfileContract;
 use App\Repositories\UserProfileRepository;
 use App\Repositories\VoucherRepository;
+use App\Contracts\AppointmentLogContract;
+use App\Repositories\AppointmentLogRepository;
+
+// Import Service classes
+use App\Services\AppointmentService;
+use App\Services\ServiceAppointmentService;
+use App\Services\UserService;
+use App\Services\StaffService;
+use App\Services\SmsService;
+use App\Services\SystemSettingService;
+use App\Services\NotificationService;
+use App\Services\OrderService;
+use App\Services\AppointmentLogService;
+use App\Services\PackageService;
+use App\Services\ServiceService;
+use App\Services\ScheduleService;
+use App\Services\ScheduleHistoryService;
+use App\Services\UserProfileService;
+use App\Services\VoucherService;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -40,6 +59,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        // Repository bindings
         $this->app->bind(PackageContract::class, PackageRepository::class);
         $this->app->bind(ServiceContract::class, ServiceRepository::class);
         $this->app->bind(ServiceAppointmentContract::class, ServiceAppointmentRepository::class);
@@ -54,7 +74,24 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(NotificationContract::class, NotificationRepository::class);
         $this->app->bind(UserProfileContract::class, UserProfileRepository::class);
         $this->app->bind(VoucherContract::class, VoucherRepository::class);
+        $this->app->bind(AppointmentLogContract::class, AppointmentLogRepository::class);
 
+        // Service bindings
+        $this->app->singleton(AppointmentService::class);
+        $this->app->singleton(ServiceAppointmentService::class);
+        $this->app->singleton(UserService::class);
+        $this->app->singleton(StaffService::class);
+        $this->app->singleton(SmsService::class);
+        $this->app->singleton(SystemSettingService::class);
+        $this->app->singleton(NotificationService::class);
+        $this->app->singleton(OrderService::class);
+        $this->app->singleton(AppointmentLogService::class);
+        $this->app->singleton(PackageService::class);
+        $this->app->singleton(ServiceService::class);
+        $this->app->singleton(ScheduleService::class);
+        $this->app->singleton(ScheduleHistoryService::class);
+        $this->app->singleton(UserProfileService::class);
+        $this->app->singleton(VoucherService::class);
     }
 
     /**
