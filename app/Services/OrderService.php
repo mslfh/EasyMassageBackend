@@ -169,7 +169,7 @@ class OrderService
                 $data['payment_method'] ?? 'unpaid',
                 $data['payment_note'] ?? '',
                 isset($data['voucher_code']) ? $data['voucher_code'] : null,
-                $appointment->customer_name ?? null,
+                $appointment->customer_first_name . ' ' . $appointment->customer_last_name,
                 $appointment->services->first()->service_title ?? null
             );
 

@@ -152,17 +152,18 @@ class AppointmentLogRepository implements AppointmentLogContract
     public function logCheckedOut($appointmentId, $paidAmount = 0, $paymentMethod = 'unpaid', $paymentNote = '', $voucherCode = null, $customerName = null, $serviceTitle = null)
     {
         $description = AppointmentLog::DESC_CHECKED_OUT;
-        if ($paidAmount > 0) {
-            $description .= ' - Paid Amount: ' . $paidAmount;
+        $comments = '';
+        if ($paidAmount >= 0) {
+            $comments .= 'Paid Amount: ' . $paidAmount;
         }
         if ($paymentMethod) {
-            $description .= ' - Payment Method: ' . $paymentMethod;
+            $comments .= ' - Payment Method: ' . $paymentMethod;
         }
         if ($paymentNote) {
-            $description .= ' - Payment Note: ' . $paymentNote;
+            $comments .= ' - Payment Note: ' . $paymentNote;
         }
         if ($voucherCode) {
-            $description .= ' - Voucher Code: ' . $voucherCode;
+            $comments .= ' - Voucher Code: ' . $voucherCode;
         }
 
         return $this->createLog(
@@ -172,7 +173,7 @@ class AppointmentLogRepository implements AppointmentLogContract
             null,
             $serviceTitle,
             $customerName,
-            $paymentNote,
+            $comments.'. '.$paymentNote,
             null
         );
     }
