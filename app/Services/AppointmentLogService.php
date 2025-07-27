@@ -62,15 +62,20 @@ class AppointmentLogService
     /**
      * Create a general log entry
      */
-    public function createLog($appointmentId, $status, $description)
+    public function createLog($appointmentId, $status, $description, $bookingTime = null, $serviceTitle = null, $customerName = null, $comments = null, $staffName = null)
     {
         try {
-            return $this->appointmentLogRepository->createLog($appointmentId, $status, $description);
+            return $this->appointmentLogRepository->createLog($appointmentId, $status, $description, $bookingTime, $serviceTitle, $customerName, $comments, $staffName);
         } catch (\Exception $e) {
             Log::error('Failed to create appointment log', [
                 'appointment_id' => $appointmentId,
                 'status' => $status,
                 'description' => $description,
+                'booking_time' => $bookingTime,
+                'service_title' => $serviceTitle,
+                'customer_name' => $customerName,
+                'comments' => $comments,
+                'staff_name' => $staffName,
                 'error' => $e->getMessage()
             ]);
             return false;
@@ -80,57 +85,57 @@ class AppointmentLogService
     /**
      * Log when an appointment is booked
      */
-    public function logAppointmentBooked($appointmentId, $bookedByStaff = false, $serviceTitle = null, $staffName = null)
+    public function logAppointmentBooked($appointmentId, $bookedByStaff = false, $bookingTime = null, $serviceTitle = null, $customerName = null, $staffName = null, $comments = null)
     {
-        return $this->appointmentLogRepository->logAppointmentBooked($appointmentId, $bookedByStaff, $serviceTitle, $staffName);
+        return $this->appointmentLogRepository->logAppointmentBooked($appointmentId, $bookedByStaff, $bookingTime, $serviceTitle, $customerName, $staffName, $comments);
     }
 
     /**
      * Log when an appointment is updated
      */
-    public function logAppointmentUpdated($appointmentId, $serviceTitle = null, $staffName = null)
+    public function logAppointmentUpdated($appointmentId, $bookingTime = null, $serviceTitle = null, $customerName = null, $staffName = null, $comments = null)
     {
-        return $this->appointmentLogRepository->logAppointmentUpdated($appointmentId, $serviceTitle, $staffName);
+        return $this->appointmentLogRepository->logAppointmentUpdated($appointmentId, $bookingTime, $serviceTitle, $customerName, $staffName, $comments);
     }
 
     /**
      * Log when an appointment is cancelled
      */
-    public function logAppointmentCancelled($appointmentId)
+    public function logAppointmentCancelled($appointmentId, $bookingTime = null, $serviceTitle = null, $customerName = null, $staffName = null, $comments = null)
     {
-        return $this->appointmentLogRepository->logAppointmentCancelled($appointmentId);
+        return $this->appointmentLogRepository->logAppointmentCancelled($appointmentId, $bookingTime, $serviceTitle, $customerName, $staffName, $comments);
     }
 
     /**
      * Log when an appointment is deleted
      */
-    public function logAppointmentDeleted($appointmentId)
+    public function logAppointmentDeleted($appointmentId, $customerName = null, $comments = null)
     {
-        return $this->appointmentLogRepository->logAppointmentDeleted($appointmentId);
+        return $this->appointmentLogRepository->logAppointmentDeleted($appointmentId, $customerName, $comments);
     }
 
     /**
      * Log when a customer is checked out
      */
-    public function logCheckedOut($appointmentId, $paidAmount = 0, $paymentMethod = 'unpaid', $paymentNote = '', $voucherCode = null)
+    public function logCheckedOut($appointmentId, $paidAmount = 0, $paymentMethod = 'unpaid', $paymentNote = '', $voucherCode = null, $customerName = null, $serviceTitle = null)
     {
-        return $this->appointmentLogRepository->logCheckedOut($appointmentId, $paidAmount, $paymentMethod, $paymentNote, $voucherCode);
+        return $this->appointmentLogRepository->logCheckedOut($appointmentId, $paidAmount, $paymentMethod, $paymentNote, $voucherCode, $customerName, $serviceTitle);
     }
 
     /**
      * Log when message is sent
      */
-    public function logMessageSent($appointmentId, $success = true, $subject = null)
+    public function logMessageSent($appointmentId, $success = true, $subject = null, $customerName = null)
     {
-        return $this->appointmentLogRepository->logMessageSent($appointmentId, $success, $subject);
+        return $this->appointmentLogRepository->logMessageSent($appointmentId, $success, $subject, $customerName);
     }
 
     /**
      * Log when customer is waiting for service
      */
-    public function logAppointmentNoShow($appointmentId)
+    public function logAppointmentNoShow($appointmentId, $bookingTime = null, $serviceTitle = null, $customerName = null, $staffName = null, $comments = null)
     {
-        return $this->appointmentLogRepository->logAppointmentNoShow($appointmentId);
+        return $this->appointmentLogRepository->logAppointmentNoShow($appointmentId, $bookingTime, $serviceTitle, $customerName, $staffName, $comments);
     }
 
     /**
@@ -143,6 +148,11 @@ class AppointmentLogService
                 'id' => $log->id,
                 'status' => $log->status,
                 'description' => $log->description,
+                'booking_time' => $log->booking_time ? $log->booking_time->format('Y-m-d H:i:s') : null,
+                'service_title' => $log->service_title,
+                'customer_name' => $log->customer_name,
+                'comments' => $log->comments,
+                'staff_name' => $log->staff_name,
                 'timestamp' => $log->created_at->format('Y-m-d H:i:s'),
                 'human_time' => $log->created_at->diffForHumans(),
             ];
@@ -243,5 +253,72 @@ class AppointmentLogService
             ]);
             return false;
         }
+    }
+
+    /**
+     * Create a comprehensive log entry with appointment data
+     */
+    public function createComprehensiveLog($appointmentId, $status, $description, array $appointmentData = [])
+    {
+        $bookingTime = $appointmentData['booking_time'] ?? null;
+        $serviceTitle = $appointmentData['service_title'] ?? null;
+        $customerName = $appointmentData['customer_name'] ?? null;
+        $comments = $appointmentData['comments'] ?? null;
+        $staffName = $appointmentData['staff_name'] ?? null;
+
+        return $this->createLog(
+            $appointmentId,
+            $status,
+            $description,
+            $bookingTime,
+            $serviceTitle,
+            $customerName,
+            $comments,
+            $staffName
+        );
+    }
+
+    /**
+     * Get logs by customer name
+     */
+    public function getLogsByCustomer($customerName)
+    {
+        return AppointmentLog::with('appointment')
+            ->where('customer_name', 'like', '%' . $customerName . '%')
+            ->orderBy('created_at', 'desc')
+            ->get();
+    }
+
+    /**
+     * Get logs by staff name
+     */
+    public function getLogsByStaff($staffName)
+    {
+        return AppointmentLog::with('appointment')
+            ->where('staff_name', 'like', '%' . $staffName . '%')
+            ->orderBy('created_at', 'desc')
+            ->get();
+    }
+
+    /**
+     * Get logs by service title
+     */
+    public function getLogsByService($serviceTitle)
+    {
+        return AppointmentLog::with('appointment')
+            ->where('service_title', 'like', '%' . $serviceTitle . '%')
+            ->orderBy('created_at', 'desc')
+            ->get();
+    }
+
+    /**
+     * Get logs within a booking time range
+     */
+    public function getLogsByBookingTimeRange($startTime, $endTime)
+    {
+        return AppointmentLog::with('appointment')
+            ->whereBetween('booking_time', [$startTime, $endTime])
+            ->orderBy('booking_time', 'desc')
+            ->get();
     }
 }

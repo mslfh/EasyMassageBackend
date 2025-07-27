@@ -13,12 +13,12 @@ interface AppointmentLogContract
     public function create(array $data);
     public function update($id, array $data);
     public function delete($id);
-    public function createLog($appointmentId, $status, $description);
-    public function logAppointmentBooked($appointmentId, $bookedByStaff = false, $serviceTitle = null, $staffName = null);
-    public function logAppointmentUpdated($appointmentId, $serviceTitle = null, $staffName = null);
-    public function logAppointmentCancelled($appointmentId);
-    public function logAppointmentDeleted($appointmentId);
-    public function logCheckedOut($appointmentId, $paidAmount = 0, $paymentMethod = 'unpaid', $paymentNote = '', $voucherCode = null);
-    public function logMessageSent($appointmentId, $success = true, $subject = null);
-    public function logAppointmentNoShow($appointmentId);
+    public function createLog($appointmentId, $status, $description, $bookingTime = null, $serviceTitle = null, $customerName = null, $comments = null, $staffName = null);
+    public function logAppointmentBooked($appointmentId, $bookedByStaff = false, $bookingTime = null, $serviceTitle = null, $customerName = null, $staffName = null, $comments = null);
+    public function logAppointmentUpdated($appointmentId, $bookingTime = null, $serviceTitle = null, $customerName = null, $staffName = null, $comments = null);
+    public function logAppointmentCancelled($appointmentId, $bookingTime = null, $serviceTitle = null, $customerName = null, $staffName = null, $comments = null);
+    public function logAppointmentDeleted($appointmentId, $customerName = null, $comments = null);
+    public function logCheckedOut($appointmentId, $paidAmount = 0, $paymentMethod = 'unpaid', $paymentNote = '', $voucherCode = null, $customerName = null, $serviceTitle = null);
+    public function logMessageSent($appointmentId, $success = true, $subject = null, $customerName = null);
+    public function logAppointmentNoShow($appointmentId, $bookingTime = null, $serviceTitle = null, $customerName = null, $staffName = null, $comments = null);
 }

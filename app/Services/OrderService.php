@@ -59,7 +59,8 @@ class OrderService
 
         if ($filter) {
             $query->whereHas('appointment', function ($q) use ($filter) {
-                $q->where('customer_first_name', 'like', "%$filter%")
+                $q
+                    ->where('customer_first_name', 'like', "%$filter%")
                     ->orWhere('customer_phone', 'like', "%$filter%")
                     ->orWhere('customer_email', 'like', "%$filter%")
                     ->orWhereHas('services', function ($q) use ($filter) {
@@ -69,7 +70,9 @@ class OrderService
         }
 
         $sortDirection = $descending ? 'desc' : 'asc';
-        $query->with('appointment.services')->orderBy($sortBy, $sortDirection);
+        $query->whereHas('appointment', function ($q) {
+            $q->where('status', '!=', 'cancelled');
+        })->with('appointment.services')->orderBy($sortBy, $sortDirection);
 
         $total = $query->count();
         $data = $query->skip($start)->take($count)->with('payment')->get();
@@ -165,7 +168,9 @@ class OrderService
                 $data['paid_amount'] ?? 0,
                 $data['payment_method'] ?? 'unpaid',
                 $data['payment_note'] ?? '',
-                isset($data['voucher_code']) ? $data['voucher_code'] : null
+                isset($data['voucher_code']) ? $data['voucher_code'] : null,
+                $appointment->customer_name ?? null,
+                $appointment->services->first()->service_title ?? null
             );
 
             DB::commit();

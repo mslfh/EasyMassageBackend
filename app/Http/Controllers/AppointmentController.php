@@ -157,6 +157,11 @@ class AppointmentController extends BaseController
         }
     }
 
+    public function cancel($id)
+    {
+        return response()->json($this->appointmentService->cancelAppointments($id));
+    }
+
     public function destroy($id)
     {
         return response()->json($this->appointmentService->deleteAppointment($id));

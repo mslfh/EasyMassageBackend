@@ -64,7 +64,9 @@ class AppointmentService
                 ->orWhereDate('booking_time', $filter);
         }
         $sortDirection = $descending ? 'desc' : 'asc';
-        $query->with('services')->orderBy($sortBy, $sortDirection);
+        $query->with(['services' => function($query) {
+            $query->withTrashed();
+        }])->orderBy($sortBy, $sortDirection);
 
         $total = $query->count();
         $data = $query->skip($start)->take($count)->get();
@@ -195,8 +197,11 @@ class AppointmentService
             $this->appointmentLogService->logAppointmentBooked(
                 $appointment->id,
                 true,
-                $serviceData['service_title'] . ' at ' . $appointment->booking_time,
-                $serviceData['staff_name']
+                $appointment->booking_time,
+                $serviceData['service_title'],
+                $serviceData['customer_name'],
+                $serviceData['staff_name'],
+                $appointment->comments ?? 'Appointment booked by staff',
             );
 
             \DB::commit();
@@ -283,8 +288,11 @@ class AppointmentService
             $this->appointmentLogService->logAppointmentBooked(
                 $appointment->id,
                 false,
-                $serviceData['service_title'] . ' at ' . $appointment->booking_time,
-                $serviceData['staff_name']
+                $appointment->booking_time,
+                $serviceData['service_title'],
+                $serviceData['customer_name'],
+                $serviceData['staff_name'],
+                $appointment->comments ?? 'Appointment booked by customer',
             );
 
             return $appointment->load('services');
@@ -333,10 +341,18 @@ class AppointmentService
         }
         $appointment->status = 'cancelled';
         $appointment->save();
+        $serviceAppointments = $appointment->services->first();
 
         // Log the appointment cancellation
-        $this->appointmentLogService->logAppointmentCancelled($id);
-
+        $this->appointmentLogService->logAppointmentCancelled(
+            $id,
+            $serviceAppointments->booking_time,
+            $serviceAppointments->service_title,
+            $serviceAppointments->customer_name,
+            $serviceAppointments->staff_name,
+            $serviceAppointments->comments ?? 'Appointment cancelled',
+        );
+        $serviceAppointments->delete();
         return $appointment;
     }
 
@@ -382,6 +398,8 @@ class AppointmentService
     {
         $serviceData = [];
         $appointment = $this->getAppointmentById($id);
+        $booking_time = null;
+        $log_comment = '';
         if (isset($appointmentData['booking_date']) && isset($appointmentData['booking_time'])) {
             $booking_time = $appointmentData['booking_date'] . ' ' . $appointmentData['booking_time'] . ":00";
             unset($appointmentData['booking_time']);
@@ -390,6 +408,7 @@ class AppointmentService
                 $appointmentData['booking_time'] = $booking_time;
                 $serviceData['booking_time'] = $booking_time;
             }
+            $log_comment .= 'Booking time: ' . $booking_time . '. ';
         }
         if (isset($appointmentData['actual_start_time'])) {
             $serviceData['booking_time'] = $appointmentData['actual_start_time'];
@@ -407,28 +426,37 @@ class AppointmentService
                 $serviceData['service_description'] = $service->description ?? null;
                 $serviceData['service_duration'] = $service->duration;
                 $serviceData['service_price'] = $service->price;
+                $log_comment .= 'Service: ' . $service->title . '. ';
             }
         }
         if (isset($staff['id'])) {
             if ($serviceAppointment->staff_id != $staff['id']) {
                 $serviceData['staff_id'] = $staff['id'];
                 $serviceData['staff_name'] = $staff['name'];
+                $log_comment .= 'Therapist: ' . $staff['name'] . '. ';
             }
         }
         if (isset($appointmentData['customer_name'])) {
-            $serviceData['customer_name'] = $appointmentData['customer_name'];
+            if ($serviceAppointment->customer_name != $appointmentData['customer_name']) {
+                $serviceData['customer_name'] = $appointmentData['customer_name'];
+                $log_comment .= 'Customer: ' . $appointmentData['customer_name'] . '. ';
+            }
         }
         $this->serviceAppointmentService->updateServiceAppointment($serviceAppointment->id, $serviceData);
 
         //Log the appointment update
         $this->appointmentLogService->logAppointmentUpdated(
             $id,
-            $serviceData['service_title'] . ' at ' . $serviceData['booking_time'] ,
-            $serviceData['staff_name']
+            $booking_time ?? $appointment->booking_time,
+            $inputService['service_title'] ?? $serviceAppointment->service_title,
+            $appointmentData['customer_name'] ?? null,
+            $staff['name'],
+            $log_comment,
         );
 
         return $this->updateAppointment($id, $appointmentData);
     }
+
 
     public function sendSms($data)
     {
@@ -450,7 +478,7 @@ class AppointmentService
         $this->notificationService->createBookingNotification(
             $smsResponse,
             $serviceData,
-            'Appintment Reminder'
+            'Appointment Reminder'
         );
         if ($smsResponse->meta->status !== 'SUCCESS') {
             throw new \Exception($smsResponse->msg, 500);
@@ -539,8 +567,16 @@ class AppointmentService
             $service->save();
         });
         $appointment->save();
+        $serviceAppointments = $appointment->services->first();
         // Log the appointment no-show
-        $this->appointmentLogService->logAppointmentNoShow($id);
+        $this->appointmentLogService->logAppointmentNoShow(
+            $id,
+            $appointment->booking_time,
+            $serviceAppointments->service_title,
+            $serviceAppointments->customer_name,
+            $serviceAppointments->staff_name,
+            $serviceAppointments->comments ?? 'Appointment marked as no-show',
+        );
 
         return $appointment;
     }
@@ -642,6 +678,7 @@ class AppointmentService
             'orders' => $orders,
         ];
     }
+
     public function getTotalStatistics($beginDate, $endDate)
     {
         $begin = \Carbon\Carbon::createFromFormat('Y-m-d', $beginDate);

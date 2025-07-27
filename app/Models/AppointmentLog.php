@@ -11,9 +11,15 @@ class AppointmentLog extends Model
         'appointment_id',
         'status',
         'description',
+        'booking_time',
+        'service_title',
+        'customer_name',
+        'comments',
+        'staff_name',
     ];
 
     protected $casts = [
+        'booking_time' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -23,18 +29,15 @@ class AppointmentLog extends Model
     const STATUS_FAILED = 'failed';
 
     // Description constants for different appointment actions
-    const DESC_APPOINTMENT_BOOKED = 'appointment booked by customer';
-    const DESC_APPOINTMENT_BOOKED_BY_STAFF = 'appointment booked by staff';
-    const DESC_APPOINTMENT_UPDATED = 'appointment updated';
-    const DESC_APPOINTMENT_CANCELLED = 'appointment cancelled';
-    const DESC_APPOINTMENT_DELETED = 'appointment deleted';
-    const DESC_CHECKED_OUT = 'checked out';
-    const DESC_CONFIRM_MESSAGE_SENT = 'confirmation message sent';
-    const DESC_REMINDER_MESSAGE_SENT = 'reminder message sent';
-
-    const DESC_APPOINTMENT_NO_SHOW = 'appointment marked as no-show';
-    const DESC_SERVICE_STARTED = 'service started';
-    const DESC_SERVICE_COMPLETED = 'service completed';
+    const DESC_APPOINTMENT_BOOKED = 'Appointment booked by customer';
+    const DESC_APPOINTMENT_BOOKED_BY_STAFF = 'Appointment booked by staff';
+    const DESC_APPOINTMENT_UPDATED = 'Appointment updated';
+    const DESC_APPOINTMENT_CANCELLED = 'Appointment cancelled';
+    const DESC_APPOINTMENT_DELETED = 'Appointment deleted';
+    const DESC_CHECKED_OUT = 'Appointment checked out';
+    const DESC_CONFIRM_MESSAGE_SENT = 'Confirmation message sent';
+    const DESC_REMINDER_MESSAGE_SENT = 'Reminder message sent';
+    const DESC_APPOINTMENT_NO_SHOW = 'Appointment marked as no-show';
 
     /**
      * Get the appointment that owns the log.

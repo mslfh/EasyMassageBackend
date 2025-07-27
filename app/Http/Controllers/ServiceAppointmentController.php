@@ -7,6 +7,7 @@ use App\Services\ServiceAppointmentService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use App\Models\Service;
+use App\Services\AppointmentLogService;
 
 class ServiceAppointmentController extends BaseController
 {
@@ -71,7 +72,8 @@ class ServiceAppointmentController extends BaseController
     public function update(Request $request, $id)
     {
         $data = $request->all();
-        if(isset($data['date']) && isset($data['time'])) {
+        $booking_time = null;
+        if (isset($data['date']) && isset($data['time'])) {
             $booking_time = Carbon::createFromFormat('Y-m-d H:i', $data['date'] . ' ' . $data['time']);
             $data['booking_time'] = $booking_time;
             unset($data['date']);
@@ -97,6 +99,23 @@ class ServiceAppointmentController extends BaseController
         return response()->json($this->serviceAppointmentService->updateServiceAppointment($id, $data));
     }
 
+    public function assignStaff(Request $request, $id)
+    {
+        $data = $request->all();
+        $service_appointment = $this->serviceAppointmentService->getServiceAppointmentById($id);
+
+        app(AppointmentLogService::class)->logAppointmentUpdated(
+            $service_appointment->appointment_id,
+            $service_appointment->booking_time,
+            $service_appointment->service_title,
+            $service_appointment->customer_name,
+            $data['staff_name'],
+            'Appointment was assigned into ' . $data['staff_name'],
+        );
+
+        return response()->json($this->serviceAppointmentService->updateServiceAppointment($id, $data));
+    }
+
     /**
      * Remove the specified resource from storage.
      */
@@ -104,5 +123,13 @@ class ServiceAppointmentController extends BaseController
     {
         $this->serviceAppointmentService->deleteServiceAppointment($id);
         return response()->json(null, 204);
+    }
+
+    public function getServiceStatistics(Request $request)
+    {
+        $start_date = $request->input('start_date', Carbon::now()->startOfMonth()->toDateString());
+        $end_date = $request->input('end_date', Carbon::now()->endOfMonth()->toDateString());
+
+        return response()->json($this->serviceAppointmentService->getServiceStatistics($start_date, $end_date));
     }
 }

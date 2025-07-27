@@ -15,7 +15,6 @@ class ScheduleService
     protected $serviceAppointmentService;
     protected $staffService;
 
-
     public function __construct(
         ScheduleContract $scheduleRepository,
         ServiceAppointmentService $serviceAppointmentService,

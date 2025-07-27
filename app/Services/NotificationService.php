@@ -64,7 +64,7 @@ class NotificationService
 
         // Log the notification creation
         $this->appointmentLogService->logMessageSent($serviceData['appointment_id'],
-            $smsResponse->meta->status === 'SUCCESS',$subject );
+            $smsResponse->meta->status === 'SUCCESS',$subject, $serviceData['customer_name']);
 
         return $this->notificationRepository->create($data);
     }
