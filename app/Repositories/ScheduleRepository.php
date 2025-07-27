@@ -60,7 +60,7 @@ class ScheduleRepository implements ScheduleContract
             ->get();
     }
 
-    public function getSchedulesFromDateAndStaff($data)
+     public function getSchedulesFromDateAndStaff($data)
     {
         $query = Schedule::query();
         if (isset($data['staff_id'])) {
@@ -71,5 +71,13 @@ class ScheduleRepository implements ScheduleContract
                 ->whereDate('work_date', '<=', $data['end_date']);
         }
         return $query->with('staff')->get();
+    }
+
+    public function getStaffScheduleStatistics()
+    {
+        return Schedule::select('staff_id', \DB::raw('count(*) as total_schedules'))
+            ->groupBy('staff_id')
+            ->with('staff')
+            ->get();
     }
 }

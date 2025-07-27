@@ -112,4 +112,11 @@ class ScheduleController extends BaseController
         $result = $this->scheduleService->getAvailableSchedules();
         return response()->json($result);
     }
+
+    public function getStaffScheduleStatistics()
+    {
+        dd('This endpoint is deprecated. Please use the new endpoint for staff schedule statistics.');
+        $result = $this->scheduleService->getStaffScheduleStatistics();
+        return response()->json($result);
+    }
 }

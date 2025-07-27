@@ -456,4 +456,29 @@ class ScheduleService
         }
         return collect($availableSchedules)->values();
     }
+
+    public function getStaffScheduleStatistics()
+    {
+        $staffSchedules = $this->scheduleRepository->getStaffScheduleStatistics();
+        $staffStatistics = [];
+
+        foreach ($staffSchedules as $schedule) {
+            $staffId = $schedule->staff_id;
+            if (!isset($staffStatistics[$staffId])) {
+                $staffStatistics[$staffId] = [
+                    'total_schedules' => 0,
+                    'available_schedules' => 0,
+                    'unavailable_schedules' => 0,
+                ];
+            }
+            $staffStatistics[$staffId]['total_schedules']++;
+            if ($schedule->status === 'active') {
+                $staffStatistics[$staffId]['available_schedules']++;
+            } else {
+                $staffStatistics[$staffId]['unavailable_schedules']++;
+            }
+        }
+
+        return collect($staffStatistics)->values();
+    }
 }

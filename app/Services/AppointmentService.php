@@ -570,7 +570,9 @@ class AppointmentService
             return [
                 'weekAppointmentsCount' => $weekAppointmentsCount,
             ];
+            return [];
         }
+
         $totalAppointments = $appointments->count();
         $appointmentGroupedByStatus = [];
         foreach ($appointments as $appointment) {
@@ -640,7 +642,6 @@ class AppointmentService
             'orders' => $orders,
         ];
     }
-
     public function getTotalStatistics($beginDate, $endDate)
     {
         $begin = \Carbon\Carbon::createFromFormat('Y-m-d', $beginDate);
