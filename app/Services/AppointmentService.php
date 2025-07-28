@@ -52,21 +52,42 @@ class AppointmentService
     {
         return $this->appointmentRepository->getAll();
     }
-    public function getPaginatedAppointments($start, $count, $filter, $sortBy, $descending)
+    public function getPaginatedAppointments($start, $count, $filter, $sortBy, $descending, $selected)
     {
+
         $query = Appointment::query();
 
         if ($filter) {
-            $query->where('customer_first_name', 'like', "%$filter%")
-                ->orWhere('customer_phone', 'like', "%$filter%")
-                ->orWhere('customer_phone', 'like', "%$filter%")
-                ->orWhere('customer_email', 'like', "%$filter%")
-                ->orWhereDate('booking_time', $filter);
+            if ($filter['field'] == "customer_name") {
+                $query->where('customer_first_name', 'like', "%{$filter['value']}%");
+            } else if ($filter['field'] == "customer_phone") {
+                $query->where('customer_phone', 'like', "%{$filter['value']}%");
+            } else if ($filter['field'] == "booking_time") {
+                $query->where('booking_time', 'like', "%{$filter['value']}%");
+            } else if ($filter['field'] == "therapist") {
+                $query->whereHas('services', function ($q) use ($filter) {
+                    $q->where('staff_name', $filter['value']);
+                });
+            }
         }
+        if ($selected) {
+            if ( $selected['field'] == "deleted" ) {
+                $query->where('deleted_at', '!=', null);
+            }
+            else if ( $selected['field'] == "cancelled" ) {
+                $query->where('status', 'cancelled');
+            }
+            else if ( $selected['field'] == "no_show" ) {
+                $query->where('type', 'no_show');
+            }
+        }
+
         $sortDirection = $descending ? 'desc' : 'asc';
-        $query->with(['services' => function($query) {
-            $query->withTrashed();
-        }])->orderBy($sortBy, $sortDirection);
+        $query->with([
+            'services' => function ($query) {
+                $query->withTrashed();
+            }
+        ])->withTrashed()->orderBy($sortBy, $sortDirection);
 
         $total = $query->count();
         $data = $query->skip($start)->take($count)->get();
