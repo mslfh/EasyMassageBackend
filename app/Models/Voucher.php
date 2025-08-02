@@ -11,4 +11,12 @@ class Voucher extends Model
     use HasFactory;
 
     protected $guarded = ['id'];
+
+    /**
+     * Get the voucher histories for the voucher.
+     */
+    public function histories()
+    {
+        return $this->hasMany(VoucherHistory::class);
+    }
 }

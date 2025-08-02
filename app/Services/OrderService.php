@@ -62,17 +62,16 @@ class OrderService
                 $q
                     ->where('customer_first_name', 'like', "%$filter%")
                     ->orWhere('customer_phone', 'like', "%$filter%")
-                    ->orWhere('customer_email', 'like', "%$filter%")
                     ->orWhereHas('services', function ($q) use ($filter) {
                         $q->where('staff_name', 'like', "%$filter%");
                     });
             });
         }
-
         $sortDirection = $descending ? 'desc' : 'asc';
         $query->whereHas('appointment', function ($q) {
             $q->where('status', '!=', 'cancelled');
-        })->with('appointment.services')->orderBy($sortBy, $sortDirection);
+        })->with('appointment.services')
+            ->orderBy($sortBy, $sortDirection);
 
         $total = $query->count();
         $data = $query->skip($start)->take($count)->with('payment')->get();
@@ -119,34 +118,56 @@ class OrderService
             $appointment->actual_end_time = $data['actual_end_time'];
             $appointment->save();
 
-            if (isset($data['voucher_code'])) {
-                $voucherData = $this->voucherService->verifyVoucher($data['voucher_code']);
+            //voucher full pay
+            if (isset($data['voucher_code']) && !$data['split_payment']) {
+                $voucherData = $this->voucherService->consumeVoucher(
+                    $data['voucher_code'],
+                    $data['total_amount'],
+                    $appointment->customer_id ?? null,
+                    $appointment->id,
+                    $appointment->customer_phone,
+                    $appointment->customer_first_name . ' ' . $appointment->customer_last_name,
+                    $appointment->services->first()->service_title . '( $' . $appointment->services->first()->service_price . ' )'
+                );
+
                 if ($voucherData['status'] == 'error') {
                     throw new \Exception($voucherData['message'], 400);
                 }
                 $voucher = $voucherData['data'];
-                if ($voucher->remaining_amount < $data['total_amount']) {
-                    $voucher->remaining_amount = 0;
-                } else {
-                    $voucher->remaining_amount -= $data['total_amount'];
-                }
-                $voucher->save();
-                $data['payment_note'] = $data['payment_note'] . '  Voucher Code: ' . $voucher->code;
+                $data['payment_note'] = $data['payment_note'] . '  ( Voucher Code: ' . $voucher->code . ' )';
             }
 
             if ($data['split_payment']) {
                 $payment = [];
                 foreach ($data['split_payment'] as $index => $split_payment) {
                     $payment[$index]['paid_by'] = $split_payment['method']['value'];
+                    $payment[$index]['remark'] = $data['payment_note'];
+
                     if ($split_payment['method']['label'] != 'Unpaid') {
                         $payment[$index]['status'] = 'Paid';
                         $payment[$index]['paid_amount'] = $split_payment['amount'];
+                        if ($split_payment['method']['label'] == 'Voucher') {
+                            $voucherData = $this->voucherService->consumeVoucher(
+                                $data['voucher_code'],
+                                $split_payment['amount'],
+                                $appointment->customer_id ?? null,
+                                $appointment->id,
+                                $appointment->customer_phone,
+                                $appointment->customer_first_name . ' ' . $appointment->customer_last_name,
+                                $appointment->services->first()->service_title . '( $' . $appointment->services->first()->service_price . ' )'
+
+                            );
+                            if ($voucherData['status'] == 'error') {
+                                throw new \Exception($voucherData['message'], 400);
+                            }
+                            $voucher = $voucherData['data'];
+                            $data['payment_note'] = $data['payment_note'] . ' ( Voucher Code: ' . $voucher->code . ' )';
+                        }
                     } else {
                         $payment[$index]['status'] = 'Unpaid';
                         $payment[$index]['paid_amount'] = 0;
                     }
                     $payment[$index]['total_amount'] = $split_payment['amount'];
-                    $payment[$index]['remark'] = $data['payment_note'];
                 }
                 $data['payment'] = $payment;
                 unset($data['split_payment']);

@@ -19,17 +19,23 @@ class UserRepository implements UserContract
     public function getPaginatedUsers($start, $count, $filter, $sortBy, $descending)
     {
         $query = User::query();
-        $query->where('id', '!=', 1)
-            ->where('id', '!=', 2)
+        $notInIds = [0, 1, 2];
+        if(auth()->user()['id'] == 0){
+             $notInIds = [];
+        }
+        $query->whereNotIn('id', $notInIds)
             ->whereDoesntHave('staff')
             ->when($filter, function ($query) use ($filter) {
-                return $query->where('name', 'like', '%' . $filter . '%')
-                    ->orWhere('phone', 'like', '%' . $filter . '%')
-                    ->orWhere('email', 'like', '%' . $filter . '%');
+                return $query->where(function ($subQuery) use ($filter) {
+                    $subQuery->where('name', 'like', '%' . $filter . '%')
+                        ->orWhere('phone', 'like', '%' . $filter . '%')
+                        ->orWhere('email', 'like', '%' . $filter . '%');
+                });
             })
             ->with('userProfile')
             ->orderBy($sortBy, $descending ? 'desc' : 'asc');
-        $total = $query->count();
+        $total = clone($query);
+        $total = $total->count();
         $data = $query->skip($start)->take($count)->get();
         return [
             'data' => $data,
@@ -83,5 +89,11 @@ class UserRepository implements UserContract
     {
         $user = $this->findById($id);
         return $user->delete();
+    }
+
+    public function verifyCurrentPassword($currentPassword)
+    {
+        $user = auth()->user();
+        return password_verify($currentPassword, $user->password);
     }
 }

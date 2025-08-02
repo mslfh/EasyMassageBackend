@@ -8,9 +8,12 @@ class VoucherService
 {
     protected $voucherRepository;
 
-    public function __construct(VoucherContract $voucherRepository)
+    protected $voucherHistoryService;
+
+    public function __construct(VoucherContract $voucherRepository, VoucherHistoryService $voucherHistoryService)
     {
         $this->voucherRepository = $voucherRepository;
+        $this->voucherHistoryService = $voucherHistoryService;
     }
 
     public function getAllVouchers()
@@ -35,10 +38,9 @@ class VoucherService
         for ($i = 0; $i < $length; $i++) {
             $code .= $characters[rand(0, 25)];
         }
-        if($this->voucherRepository->findByCode($code)) {
+        if ($this->voucherRepository->findByCode($code)) {
             return $this->generateVoucherCode($length);
-        }
-        else{
+        } else {
             return $code;
         }
     }
@@ -51,8 +53,14 @@ class VoucherService
         if (empty($data['remaining_amount'])) {
             $data['remaining_amount'] = $data['amount'];
         }
-
-        return $this->voucherRepository->createVoucher($data);
+        $vourcher = $this->voucherRepository->createVoucher($data);
+        // Log voucher creation history
+        $this->voucherHistoryService->recordVoucherInit(
+            $vourcher->id,
+            $data['remaining_amount'],
+            ['description' => 'Voucher created']
+        );
+        return $vourcher;
     }
 
     public function bulkCreateVoucher(array $data)
@@ -82,6 +90,16 @@ class VoucherService
 
     public function updateVoucher($id, array $data)
     {
+        $voucher = $this->voucherRepository->getVoucherById($id);
+        //log voucher update history
+        $this->voucherHistoryService->recordVoucherEdit(
+            $id,
+            $voucher->remaining_amount,
+            $data['remaining_amount'] ?? $voucher->remaining_amount,
+            [
+                'description' => 'Voucher updated',
+            ]
+        );
         return $this->voucherRepository->updateVoucher($id, $data);
     }
 
@@ -94,13 +112,63 @@ class VoucherService
                 'message' => "Voucher code {$code} is invalid."
 
             ];
-        }  else {
+        } else {
             return [
                 'status' => 'success',
                 'message' => 'Voucher is valid',
                 'data' => $voucher
             ];
         }
+    }
+
+    public function consumeVoucher(
+        $code,
+        $amount,
+        $userId = null,
+        $appointmentId = null,
+        $phone = null,
+        $name = null,
+        $service = null
+    ) {
+        $voucher = $this->voucherRepository->findByCode($code);
+        if (!$voucher || $voucher->is_active !== 1) {
+            return [
+                'status' => 'error',
+                'message' => "Voucher code {$code} is invalid."
+            ];
+        }
+
+        if ($voucher->remaining_amount < $amount) {
+            return [
+                'status' => 'error',
+                'message' => "Insufficient voucher balance."
+            ];
+        }
+
+        // Deduct the amount from the voucher
+        $voucher->remaining_amount -= $amount;
+
+        $voucher->save();
+
+        // Log the voucher consumption
+        $this->voucherHistoryService->recordVoucherConsumption(
+            $voucher->id,
+            $amount,
+            [
+                'description' => 'Voucher consumed',
+                'user_id' => $userId,
+                'appointment_id' => $appointmentId,
+                'phone' => $phone,
+                'name' => $name,
+                'service' => $service
+            ]
+        );
+
+        return [
+            'status' => 'success',
+            'message' => 'Voucher consumed successfully',
+            'data' => $voucher
+        ];
     }
 
     public function verifyValidCode($codes)

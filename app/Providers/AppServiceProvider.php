@@ -34,6 +34,8 @@ use App\Repositories\UserProfileRepository;
 use App\Repositories\VoucherRepository;
 use App\Contracts\AppointmentLogContract;
 use App\Repositories\AppointmentLogRepository;
+use App\Contracts\VoucherHistoryContract;
+use App\Repositories\VoucherHistoryRepository;
 
 // Import Service classes
 use App\Services\AppointmentService;
@@ -51,6 +53,7 @@ use App\Services\ScheduleService;
 use App\Services\ScheduleHistoryService;
 use App\Services\UserProfileService;
 use App\Services\VoucherService;
+use App\Services\VoucherHistoryService;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -75,6 +78,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(UserProfileContract::class, UserProfileRepository::class);
         $this->app->bind(VoucherContract::class, VoucherRepository::class);
         $this->app->bind(AppointmentLogContract::class, AppointmentLogRepository::class);
+        $this->app->bind(VoucherHistoryContract::class, VoucherHistoryRepository::class);
 
         // Service bindings
         $this->app->singleton(AppointmentService::class);
@@ -92,6 +96,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(ScheduleHistoryService::class);
         $this->app->singleton(UserProfileService::class);
         $this->app->singleton(VoucherService::class);
+        $this->app->singleton(VoucherHistoryService::class);
     }
 
     /**

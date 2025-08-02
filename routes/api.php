@@ -14,6 +14,7 @@ use App\Http\Controllers\ServiceAppointmentController;
 use App\Http\Controllers\SystemSettingController;
 use App\Http\Controllers\UserProfileController;
 use App\Http\Controllers\VoucherController;
+use App\Http\Controllers\VoucherHistoryController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\AppointmentLogController;
 
@@ -101,7 +102,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // User management
     Route::apiResource('user', UserController::class);
+
+    Route::post('/user/change-password', [UserController::class, 'changePassword']);
     Route::post('/import-user', [UserController::class, 'import']);
+
     Route::get('/search-user-by-field', [UserController::class, 'getByKeyword']);
 
     Route::post('/upload-attachment/{id}', [UserProfileController::class, 'uploadAttachment']);
@@ -112,6 +116,17 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/vouchers/bulk', [VoucherController::class, 'bulkStore']);
     Route::post('/vouchers/verify', [VoucherController::class, 'verify']);
     Route::post('/vouchers/verifyValidCode', [VoucherController::class, 'verifyValidCode']);
+
+
+    // Voucher History management
+    Route::apiResource('voucher-histories', VoucherHistoryController::class);
+    Route::get('/voucher-histories/voucher/{voucherId}', [VoucherHistoryController::class, 'getByVoucherId']);
+    Route::get('/voucher-histories/user/{userId}', [VoucherHistoryController::class, 'getByUserId']);
+    Route::get('/voucher-histories/action/{action}', [VoucherHistoryController::class, 'getByAction']);
+    Route::post('/voucher-histories/record-consumption', [VoucherHistoryController::class, 'recordConsumption']);
+    Route::post('/voucher-histories/record-init', [VoucherHistoryController::class, 'recordInit']);
+    Route::post('/voucher-histories/record-edit', [VoucherHistoryController::class, 'recordEdit']);
+    Route::post('/voucher-histories/record-refund', [VoucherHistoryController::class, 'recordRefund']);
 
     // System settings
     Route::apiResource('system-setting', SystemSettingController::class);

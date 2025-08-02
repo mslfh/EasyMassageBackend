@@ -60,4 +60,21 @@ class UserService
     {
         return $this->userRepository->delete($id);
     }
+
+    public function changePassword(array $data)
+    {
+        // verify current password
+        if (!$this->userRepository->verifyCurrentPassword($data['current_password'])) {
+            throw new \Exception('Current password is incorrect');
+        }
+        $data['password'] = $data['new_password'];
+        unset($data['current_password'], $data['new_password']);
+        // update password
+        $data['id'] = auth()->id(); // assuming the user is authenticated
+        // update the password
+        $this->updateUser($data['id'], $data);
+        // return success response
+        return ['message' => 'Password changed successfully'];
+
+    }
 }
