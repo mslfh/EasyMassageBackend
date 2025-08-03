@@ -77,4 +77,18 @@ class UserService
         return ['message' => 'Password changed successfully'];
 
     }
+
+    public function changeUserPassword($id, array $data)
+    {
+        // validate permission to change user password
+        $adminId = [0,1,2];
+        $userId = auth()->id();
+        if (!in_array($userId, $adminId)) {
+            throw new \Exception('Unauthorized action');
+        }
+        $data['password'] = $data['new_password'];
+        unset($data['current_password'], $data['new_password']);
+        // update the user's password
+        return $this->updateUser($id, $data);
+    }
 }

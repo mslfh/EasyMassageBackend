@@ -104,6 +104,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::apiResource('user', UserController::class);
 
     Route::post('/user/change-password', [UserController::class, 'changePassword']);
+    Route::post('/user/change-password/{id}', [UserController::class, 'changeUserPassword']);
     Route::post('/import-user', [UserController::class, 'import']);
 
     Route::get('/search-user-by-field', [UserController::class, 'getByKeyword']);

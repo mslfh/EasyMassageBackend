@@ -104,5 +104,13 @@ class UserController extends BaseController
         return response()->json($this->userService->changePassword($data));
     }
 
+    public function changeUserPassword(Request $request, $id)
+    {
+        $data = $request->validate([
+            'new_password' => 'required|string|min:8|',
+        ]);
+        return response()->json($this->userService->changeUserPassword($id, $data));
+    }
 }
+
 
