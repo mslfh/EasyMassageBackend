@@ -125,11 +125,11 @@ class ServiceAppointmentController extends BaseController
         return response()->json(null, 204);
     }
 
-    public function getServiceStatistics(Request $request)
+    public function getAnalyticsStatistics(Request $request)
     {
         $start_date = $request->input('start_date', Carbon::now()->startOfMonth()->toDateString());
         $end_date = $request->input('end_date', Carbon::now()->endOfMonth()->toDateString());
 
-        return response()->json($this->serviceAppointmentService->getServiceStatistics($start_date, $end_date));
+        return response()->json($this->serviceAppointmentService->getAnalyticsStatistics($start_date, $end_date));
     }
 }

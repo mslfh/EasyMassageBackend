@@ -10,4 +10,5 @@ interface ServiceAppointmentContract
     public function findById(int $id);
     public function getAll();
     public function getAppointmentsFromDate($date);
+    public function getAppointmentsFromDateRange($startDate, $endDate);
 }

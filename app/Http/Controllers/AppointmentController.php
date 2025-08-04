@@ -184,11 +184,11 @@ class AppointmentController extends BaseController
         return response()->json($this->appointmentService->getTodayStatistics());
     }
 
-    public function getTotalStatistics()
+    public function getAppointmentStatistics()
     {
-        $beginDate = request()->query('beginDate', null);
-        $endDate = request()->query('endDate', null);
-        return response()->json($this->appointmentService->getTotalStatistics($beginDate, $endDate));
+        $beginDate = request()->query('start_date', null);
+        $endDate = request()->query('end_date', null);
+        return response()->json($this->appointmentService->getAppointmentStatistics($beginDate, $endDate));
     }
 
 }

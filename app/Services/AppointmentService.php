@@ -71,13 +71,11 @@ class AppointmentService
             }
         }
         if ($selected) {
-            if ( $selected['field'] == "deleted" ) {
+            if ($selected['field'] == "deleted") {
                 $query->where('deleted_at', '!=', null);
-            }
-            else if ( $selected['field'] == "cancelled" ) {
+            } else if ($selected['field'] == "cancelled") {
                 $query->where('status', 'cancelled');
-            }
-            else if ( $selected['field'] == "no_show" ) {
+            } else if ($selected['field'] == "no_show") {
                 $query->where('type', 'no_show');
             }
         }
@@ -627,7 +625,6 @@ class AppointmentService
             return [
                 'weekAppointmentsCount' => $weekAppointmentsCount,
             ];
-            return [];
         }
 
         $totalAppointments = $appointments->count();
@@ -700,27 +697,78 @@ class AppointmentService
         ];
     }
 
-    public function getTotalStatistics($beginDate, $endDate)
+    public function getAppointmentStatistics($beginDate, $endDate)
     {
-        $begin = \Carbon\Carbon::createFromFormat('Y-m-d', $beginDate);
-        $end = \Carbon\Carbon::createFromFormat('Y-m-d', $endDate);
-
-        $appointments = $this->appointmentRepository->getStatisticsByDate($begin, $end);
+        $appointments = $this->appointmentRepository->getStatisticsByDate($beginDate, $endDate);
         if ($appointments->isEmpty()) {
             return [
             ];
         }
         $totalAppointments = $appointments->count();
+        $appointmentGroupedByStatus = [];
+        foreach ($appointments as $appointment) {
+            $status = $appointment->status;
+            if (!isset($appointmentGroupedByStatus[$status])) {
+                $appointmentGroupedByStatus[$status] = 0;
+            }
+            $appointmentGroupedByStatus[$status]++;
+        }
+        // Get orders from appointments
         $orders = $appointments->pluck('order');
+
         $totalAmount = $orders->sum('total_amount');
         $paidAmount = $orders->sum('paid_amount');
-        $voucherAmount = $orders->sum('voucher_amount');
 
+        $amountGroupedByPaymentMethod = [];
+        foreach ($orders as $order) {
+            if (!isset($order->payment_method)) {
+                continue;
+            }
+            $paymentMethod = $order->payment_method;
+            if ($paymentMethod == 'split_payment') {
+                $splitPayments = $order->payment()->get();
+                foreach ($splitPayments as $splitPayment) {
+                    $paymentMethod = $splitPayment->paid_by;
+                    if (!isset($amountGroupedByPaymentMethod[$paymentMethod])) {
+                        if ($splitPayment->paid_by === 'unpaid') {
+                            $amountGroupedByPaymentMethod[$paymentMethod] = (float) number_format($splitPayment->total_amount, 2, '.', '');
+                        } else {
+                            $amountGroupedByPaymentMethod[$paymentMethod] = (float) number_format($splitPayment->paid_amount, 2, '.', '');
+                        }
+                    } else {
+                        if ($splitPayment->paid_by === 'unpaid') {
+                            $amountGroupedByPaymentMethod[$paymentMethod] += (float) number_format($splitPayment->total_amount, 2, '.', '');
+                        } else {
+                            $amountGroupedByPaymentMethod[$paymentMethod] += (float) number_format($splitPayment->paid_amount, 2, '.', '');
+                        }
+                        $amountGroupedByPaymentMethod[$paymentMethod] = (float) number_format($amountGroupedByPaymentMethod[$paymentMethod], 2, '.', '');
+                    }
+                }
+            } else {
+                if (!isset($amountGroupedByPaymentMethod[$paymentMethod])) {
+                    if ($order->payment_method === 'unpaid') {
+                        $amountGroupedByPaymentMethod[$paymentMethod] = (float) number_format($order->total_amount, 2, '.', '');
+                    } else {
+                        $amountGroupedByPaymentMethod[$paymentMethod] = (float) number_format($order->paid_amount, 2, '.', '');
+                    }
+                } else {
+                    if ($order->payment_method === 'unpaid') {
+                        $amountGroupedByPaymentMethod[$paymentMethod] += (float) number_format($order->total_amount, 2, '.', '');
+                    } else {
+                        $amountGroupedByPaymentMethod[$paymentMethod] += (float) number_format($order->paid_amount, 2, '.', '');
+                    }
+                    $amountGroupedByPaymentMethod[$paymentMethod] = (float) number_format($amountGroupedByPaymentMethod[$paymentMethod], 2, '.', '');
+                }
+            }
+        }
         return [
             'total_appointments' => $totalAppointments,
             'total_revenue' => $totalAmount,
             'total_paid' => $paidAmount,
-            'total_voucher' => $voucherAmount,
+            'appointmentGroup' => $appointmentGroupedByStatus,
+            'orderGroup' => $amountGroupedByPaymentMethod,
+            'appointments' => $appointments,
+            'orders' => $orders,
         ];
     }
 }

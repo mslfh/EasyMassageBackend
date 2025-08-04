@@ -50,4 +50,13 @@ class ServiceAppointmentRepository implements ServiceAppointmentContract
     {
         return ServiceAppointment::whereDate('booking_time', $date)->get();
     }
+
+    public function getAppointmentsFromDateRange($startDate, $endDate)
+    {
+        return ServiceAppointment::whereBetween('booking_time', [$startDate, $endDate])
+        ->where('service_title', '!=', 'Break')
+        ->with('appointment',function($query){
+            $query->where('status', '!=', 'cancelled')->with('order');
+        })->get();
+    }
 }

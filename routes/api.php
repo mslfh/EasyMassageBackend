@@ -79,7 +79,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/sendSms', [AppointmentController::class, 'sendSms']);
     Route::post('/appointments/mark-no-show', [AppointmentController::class, 'makeNoShow']);
     Route::post('/appointments/cancel/{id}', [AppointmentController::class, 'cancel']);
-      Route::get('/getBookedServiceByDate', [AppointmentController::class, 'getBookedServiceByDate']);
+    Route::get('/getBookedServiceByDate', [AppointmentController::class, 'getBookedServiceByDate']);
 
     // Order management
     Route::apiResource('orders', OrderController::class);
@@ -135,10 +135,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Statistics routes
     Route::get('/getTodayStatistics', [AppointmentController::class, 'getTodayStatistics']);
+    Route::get('/getAppointmentStatistics', [AppointmentController::class, 'getAppointmentStatistics']);
     Route::get('/getStaffIncomeStatistics', [StaffController::class, 'getStaffIncomeStatistics']);
     Route::get('/getStaffScheduleStatistics', [ScheduleController::class, 'getStaffScheduleStatistics']);
-    Route::get('/getTotalStatistics', [AppointmentController::class, 'getTotalStatistics']);
-    Route::get('/getServiceStatistics', [ServiceAppointmentController::class, 'getServiceStatistics']);
+
+    Route::get('/getAnalyticsStatistics', [ServiceAppointmentController::class, 'getAnalyticsStatistics']);
 
     //notification
     Route::get('/getNotification', [NotificationController::class, 'getNotification']);
