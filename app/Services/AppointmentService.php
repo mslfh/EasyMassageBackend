@@ -387,7 +387,7 @@ class AppointmentService
                     'staff_id' => $service->staff_id,
                     'staff_name' => $service->staff_name,
                     'booking_time' => $service->booking_time,
-                    'expected_end_time' => \Carbon\Carbon::createFromFormat('Y-m-d H:i:s', $service->booking_time)
+                    'expected_end_time' => \Carbon\Carbon::createFromFormat('Y-m-d H:i:s', $service->booking_time, 'UTC')
                         ->addMinutes($service->service_duration),
                     'package_title' => $service->package_title,
                     'service_id' => $service->service_id,
@@ -426,15 +426,16 @@ class AppointmentService
             if ($appointment->booking_time != $booking_time) {
                 $appointmentData['booking_time'] = $booking_time;
                 $serviceData['booking_time'] = $booking_time;
+                $log_comment .= 'Booking time changed into: ' . $booking_time . '. ';
             }
-            $log_comment .= 'Booking time: ' . $booking_time . '. ';
+
         }
         if (isset($appointmentData['actual_start_time'])) {
             $serviceData['booking_time'] = $appointmentData['actual_start_time'];
         }
         $serviceAppointment = $appointment->services->first();
         if (isset($inputService['id'])) {
-            if ($serviceAppointment->id != $inputService['id']) {
+            if ($serviceAppointment->service_id != $inputService['id']) {
                 $service = Service::with('package')->findOrFail($inputService['id']);
                 $serviceData['service_id'] = $service->id ?? null;
                 $serviceData['package_id'] = $service->package_id ?? null;
@@ -445,22 +446,29 @@ class AppointmentService
                 $serviceData['service_description'] = $service->description ?? null;
                 $serviceData['service_duration'] = $service->duration;
                 $serviceData['service_price'] = $service->price;
-                $log_comment .= 'Service: ' . $service->title . '. ';
+                $log_comment .= 'Service changed into: ' . $service->title . '. ';
             }
         }
         if (isset($staff['id'])) {
             if ($serviceAppointment->staff_id != $staff['id']) {
                 $serviceData['staff_id'] = $staff['id'];
                 $serviceData['staff_name'] = $staff['name'];
-                $log_comment .= 'Therapist: ' . $staff['name'] . '. ';
+                $log_comment .= 'Therapist changed into: ' . $staff['name'] . '. ';
             }
         }
         if (isset($appointmentData['customer_name'])) {
             if ($serviceAppointment->customer_name != $appointmentData['customer_name']) {
                 $serviceData['customer_name'] = $appointmentData['customer_name'];
-                $log_comment .= 'Customer: ' . $appointmentData['customer_name'] . '. ';
+                $log_comment .= 'Customer changed into: ' . $appointmentData['customer_name'] . '. ';
             }
         }
+        if (isset($appointmentData['duration'])) {
+            if ($serviceAppointment->service_duration != $appointmentData['duration']) {
+                $serviceData['service_duration'] = $appointmentData['duration'];
+                $log_comment .= 'Duration changed into: ' . $appointmentData['duration'] . ' min. ';
+            }
+        }
+
         $this->serviceAppointmentService->updateServiceAppointment($serviceAppointment->id, $serviceData);
 
         //Log the appointment update

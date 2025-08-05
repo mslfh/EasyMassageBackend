@@ -124,6 +124,7 @@ class AppointmentController extends BaseController
             'actual_start_time' => 'nullable|string',
             'actual_end_time' => 'nullable|string',
             'status' => 'nullable|string',
+            'duration' => 'nullable|integer',
         ]);
         $inputService = $request->input('service') ?? [];
         $staff = $request->input('staff') ?? [];
