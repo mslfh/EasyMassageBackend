@@ -40,14 +40,14 @@ class AppointmentRepository implements AppointmentContract
             return Appointment::where('customer_phone', $phone)
             ->with('services', function ($query) {
                 $query->withTrashed();
-            })->get();
+            })->orderBy('booking_time','desc')->get();
         }
         return Appointment::where(
             'customer_id', $userId
         )
         ->with('services', function ($query) {
             $query->withTrashed();
-        })->get();
+        })->orderBy('booking_time','desc')->get();
     }
     public function getById($id)
     {
