@@ -59,7 +59,7 @@ class UserController extends BaseController
             'name' => 'required|string|max:255',
             'password' => 'nullable|string|min:8',
             'phone' => 'required|string|max:15|unique:users,phone',
-            'email' => 'nullable|email|unique:users,email',
+            'email' => 'sometimes|email|unique:users,email',
         ]);
         return response()->json($this->userService->createUser($data), 201);
     }
@@ -82,7 +82,7 @@ class UserController extends BaseController
     {
         $data = $request->validate([
             'name' => 'sometimes|string|max:255',
-            'email' => 'nullable|email|unique:users,email',
+            'email' => 'sometimes|email|unique:users,email',
             'password' => 'sometimes|string|min:8',
             'phone' => 'required|string|max:15',
         ]);
