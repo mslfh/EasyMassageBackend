@@ -85,6 +85,8 @@ class UserController extends BaseController
             'email' => 'nullable|email|unique:users,email',
             'password' => 'sometimes|string|min:8',
             'phone' => 'required|string|max:15',
+            'first_name' => 'sometimes|string|max:255',
+            'last_name' => 'sometimes|string|max:255',
         ]);
         return response()->json($this->userService->updateUser($id, $data));
     }
