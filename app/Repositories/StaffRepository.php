@@ -51,7 +51,8 @@ class StaffRepository implements StaffContract
 
         return Staff::where('status', 'active')
             ->whereHas('schedules', function ($query) use ($formatStartTime,$formatEndTime) {
-                $query->where('work_date', $formatStartTime->format('Y-m-d'))
+                $query->where('status', 'active')
+                ->where('work_date', $formatStartTime->format('Y-m-d'))
                     ->whereRaw('STR_TO_DATE(CONCAT(work_date, " ", start_time), "%Y-%m-%d %H:%i") <= ?', [$formatStartTime])
                     ->whereRaw('STR_TO_DATE(CONCAT(work_date, " ", end_time), "%Y-%m-%d %H:%i") >= ?', [$formatEndTime]);
             })

@@ -118,7 +118,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/vouchers/verify', [VoucherController::class, 'verify']);
     Route::post('/vouchers/verifyValidCode', [VoucherController::class, 'verifyValidCode']);
 
-
     // Voucher History management
     Route::apiResource('voucher-histories', VoucherHistoryController::class);
     Route::get('/voucher-histories/voucher/{voucherId}', [VoucherHistoryController::class, 'getByVoucherId']);
