@@ -326,6 +326,7 @@ class AppointmentService
         $appointmentData = [
             'type' => 'break',
             'booking_time' => $data['date'] . ' ' . $data['time'],
+            'comments' => $data['comments'],
         ];
         $appointmentServiceData = [
             'booking_time' => $data['date'] . ' ' . $data['time'],

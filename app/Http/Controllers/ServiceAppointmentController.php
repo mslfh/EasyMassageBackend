@@ -96,6 +96,11 @@ class ServiceAppointmentController extends BaseController
             $data['staff_name'] = $data['staff']['name'];
             unset($data['staff']);
         }
+        if(isset($data['comments'])) {
+            $appointment = $this->serviceAppointmentService->getServiceAppointmentById($id)->appointment;
+            $appointment->comments = $data['comments'];
+            $appointment->save();
+        }
         return response()->json($this->serviceAppointmentService->updateServiceAppointment($id, $data));
     }
 
