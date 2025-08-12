@@ -134,7 +134,7 @@ class OrderService
                     throw new \Exception($voucherData['message'], 400);
                 }
                 $voucher = $voucherData['data'];
-                $data['payment_note'] = $data['payment_note'] . '  ( Voucher Code: ' . $voucher->code . ' )';
+                $data['payment_note'] = $data['payment_note'] . ' (Voucher Code: ' . $voucher->code . ')';
             }
 
             if ($data['split_payment']) {

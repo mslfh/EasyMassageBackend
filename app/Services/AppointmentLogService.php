@@ -38,8 +38,11 @@ class AppointmentLogService
     /**
      * Get logs by date range
      */
-    public function getLogsByDateRange($startDate, $endDate = null)
+    public function getLogsByDateRange($startDate, $endDate = null, $appointmentId = null)
     {
+        if($appointmentId){
+            return $this->appointmentLogRepository->getByAppointmentId($appointmentId);
+        }
         return $this->appointmentLogRepository->getLogsByDateRange($startDate, $endDate);
     }
 

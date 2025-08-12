@@ -75,10 +75,11 @@ class AppointmentLogRepository implements AppointmentLogContract
         return $log->delete();
     }
 
-    public function createLog($appointmentId, $status, $description, $bookingTime = null, $serviceTitle = null, $customerName = null, $comments = null, $staffName = null)
+    public function createLog($appointmentId, $action, $status, $description, $bookingTime = null, $serviceTitle = null, $customerName = null, $comments = null, $staffName = null)
     {
         return $this->create([
             'appointment_id' => $appointmentId,
+            'action' => $action,
             'status' => $status,
             'description' => $description,
             'booking_time' => $bookingTime,
@@ -97,6 +98,7 @@ class AppointmentLogRepository implements AppointmentLogContract
 
         return $this->createLog(
             $appointmentId,
+            AppointmentLog::ACTION_BOOKED,
             AppointmentLog::STATUS_SUCCESS,
             $description,
             $bookingTime,
@@ -111,6 +113,7 @@ class AppointmentLogRepository implements AppointmentLogContract
     {
         return $this->createLog(
             $appointmentId,
+            AppointmentLog::ACTION_UPDATED,
             AppointmentLog::STATUS_SUCCESS,
             AppointmentLog::DESC_APPOINTMENT_UPDATED,
             $bookingTime,
@@ -125,6 +128,7 @@ class AppointmentLogRepository implements AppointmentLogContract
     {
         return $this->createLog(
             $appointmentId,
+            AppointmentLog::ACTION_CANCELLED,
             AppointmentLog::STATUS_SUCCESS,
             AppointmentLog::DESC_APPOINTMENT_CANCELLED,
             $bookingTime,
@@ -139,6 +143,7 @@ class AppointmentLogRepository implements AppointmentLogContract
     {
         return $this->createLog(
             $appointmentId,
+            AppointmentLog::ACTION_DELETED,
             AppointmentLog::STATUS_SUCCESS,
             AppointmentLog::DESC_APPOINTMENT_DELETED,
             null,
@@ -157,23 +162,24 @@ class AppointmentLogRepository implements AppointmentLogContract
             $comments .= 'Paid Amount: ' . $paidAmount;
         }
         if ($paymentMethod) {
-            $comments .= ' - Payment Method: ' . $paymentMethod;
+            $comments .= ' ; Payment Method: ' . $paymentMethod;
         }
         if ($paymentNote) {
-            $comments .= ' - Payment Note: ' . $paymentNote;
+            $comments .= ' ; Payment Note: ' . $paymentNote;
         }
         if ($voucherCode) {
-            $comments .= ' - Voucher Code: ' . $voucherCode;
+            $comments .= ' ; Voucher Code: ' . $voucherCode;
         }
 
         return $this->createLog(
             $appointmentId,
+            AppointmentLog::ACTION_CHECKED_OUT,
             AppointmentLog::STATUS_SUCCESS,
             $description,
             null,
             $serviceTitle,
             $customerName,
-            $comments.'. '.$paymentNote,
+            $comments,
             null
         );
     }
@@ -182,10 +188,11 @@ class AppointmentLogRepository implements AppointmentLogContract
     {
         $status = $success ? AppointmentLog::STATUS_SUCCESS : AppointmentLog::STATUS_FAILED;
 
-        $description = $subject ? "Message sent: $subject" : "Message sent";
+        $description = $subject ? "Message: $subject" : "Message Sent";
 
         return $this->createLog(
             $appointmentId,
+            AppointmentLog::ACTION_MESSAGE_SENT,
             $status,
             $description,
             null,
@@ -200,6 +207,7 @@ class AppointmentLogRepository implements AppointmentLogContract
     {
         return $this->createLog(
             $appointmentId,
+            AppointmentLog::ACTION_UPDATED,
             AppointmentLog::STATUS_SUCCESS,
             AppointmentLog::DESC_APPOINTMENT_NO_SHOW,
             $bookingTime,

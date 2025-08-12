@@ -220,7 +220,8 @@ class AppointmentService
                 $serviceData['service_title'],
                 $serviceData['customer_name'],
                 $serviceData['staff_name'],
-                $appointment->comments ?? 'Appointment booked by staff',
+                'Booking Time: ' . $appointment->booking_time . ' ; Service Title: ' . $serviceData['service_title']
+                . '. ' . $appointment->comments,
             );
 
             \DB::commit();
@@ -311,7 +312,8 @@ class AppointmentService
                 $serviceData['service_title'],
                 $serviceData['customer_name'],
                 $serviceData['staff_name'],
-                $appointment->comments ?? 'Appointment booked by customer',
+                'Booking Time: ' . $appointment->booking_time . ' ; Service Title: ' . $serviceData['service_title']
+                . '. ' . $appointment->comments,
             );
 
             return $appointment->load('services');

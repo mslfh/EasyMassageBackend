@@ -13,7 +13,7 @@ interface AppointmentLogContract
     public function create(array $data);
     public function update($id, array $data);
     public function delete($id);
-    public function createLog($appointmentId, $status, $description, $bookingTime = null, $serviceTitle = null, $customerName = null, $comments = null, $staffName = null);
+    public function createLog($appointmentId, $action, $status, $description, $bookingTime = null, $serviceTitle = null, $customerName = null, $comments = null, $staffName = null);
     public function logAppointmentBooked($appointmentId, $bookedByStaff = false, $bookingTime = null, $serviceTitle = null, $customerName = null, $staffName = null, $comments = null);
     public function logAppointmentUpdated($appointmentId, $bookingTime = null, $serviceTitle = null, $customerName = null, $staffName = null, $comments = null);
     public function logAppointmentCancelled($appointmentId, $bookingTime = null, $serviceTitle = null, $customerName = null, $staffName = null, $comments = null);

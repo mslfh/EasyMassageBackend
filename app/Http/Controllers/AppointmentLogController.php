@@ -63,11 +63,13 @@ class AppointmentLogController extends Controller
         $data = $request->validate([
             'start_date' => 'required|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
+            'appointment_id' => 'nullable|integer|exists:appointments,id'
         ]);
 
         $logs = $this->appointmentLogService->getLogsByDateRange(
             $data['start_date'],
-            $data['end_date'] ?? now()->toDateString()
+            $data['end_date'] ?? now()->toDateString(),
+            $data['appointment_id']??null
         );
 
         return response()->json([

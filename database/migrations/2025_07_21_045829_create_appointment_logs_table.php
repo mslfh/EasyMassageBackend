@@ -15,6 +15,8 @@ return new class extends Migration {
             $table->foreignId('appointment_id')->constrained()->onDelete('cascade');
             $table->string('status')->default('success')
                 ->comment('success, failed');
+            $table->string('action')->default('BOOKED')
+                ->comment('BOOKED, MESSAGE_SENT, UPDATED, CHECKED_OUT, CANCELED');
             $table->string('description')->default('appointment booked')
                 ->comment('appointment booked, message sent, waiting for service, checked out, appointment canceled');
             $table->dateTime('booking_time')->comment('The time of the service appointment')->nullable();
