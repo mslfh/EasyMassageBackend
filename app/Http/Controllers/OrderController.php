@@ -160,4 +160,12 @@ class OrderController extends BaseController
     {
         return response()->json($this->orderService->deleteOrder($id));
     }
+
+    public function getSalesStatistics()
+    {
+        $beginDate = request()->query('start_date', null);
+        $endDate = request()->query('end_date', null);
+        return response()->json($this->orderService->getSalesStatistics($beginDate, $endDate));
+    }
+
 }

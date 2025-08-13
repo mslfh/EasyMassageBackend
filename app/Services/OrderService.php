@@ -5,6 +5,7 @@ use App\Contracts\OrderContract;
 use App\Models\Order;
 use App\Services\AppointmentService;
 use App\Services\VoucherService;
+use Carbon\Carbon;
 use DB;
 
 class OrderService
@@ -13,7 +14,6 @@ class OrderService
     protected $appointmentService;
     protected $voucherService;
     protected $appointmentLogService;
-
 
     public function __construct(OrderContract $orderRepository, AppointmentService $appointmentService, VoucherService $voucherService, AppointmentLogService $appointmentLogService)
     {
@@ -200,5 +200,46 @@ class OrderService
             DB::rollback();
             throw $e;
         }
+    }
+
+    public function getSalesStatistics($startDate = null, $endDate = null)
+    {
+        if (!$startDate) {
+            $startDate = Carbon::today();
+        }
+        $orders = $this->orderRepository->getOrdersByDateRange($startDate, $endDate);
+        $sales = [
+            'type' => '',
+            'sales_qty' => 0,
+            'pricing_fees' => 0,
+            'receivable_fees' => 0,
+            'payments_collected' => 0,
+        ];
+        $servicesMismatch = [];
+
+        foreach ($orders as $order) {
+            $pricing_fees = $order->appointment->services->sum('service_price');
+            $sales['type'] = 'Service';
+            $sales['sales_qty'] += 1;
+            $sales['pricing_fees'] += $pricing_fees;
+            $sales['receivable_fees'] += $order->total_amount;
+            $sales['payments_collected'] += $order->paid_amount;
+
+            if($pricing_fees != $order->total_amount) {
+                $servicesMismatch[] = [
+                    'appointment_id' => $order->appointment_id,
+                    'pricing_fees' => $pricing_fees,
+                    'total_amount' => $order->total_amount,
+                    'booking_time' => $order->appointment->booking_time,
+                    'service_title' => $order->appointment->services->first()->service_title ?? 'N/A',
+                    'staff_name' => $order->appointment->services->first()->staff_name ?? 'N/A',
+                    'duration' => $order->appointment->services->first()->service_duration ?? 'N/A',
+                ];
+            }
+        }
+        return [
+            'sales' => $sales,
+            'servicesMismatch' => $servicesMismatch
+        ];
     }
 }

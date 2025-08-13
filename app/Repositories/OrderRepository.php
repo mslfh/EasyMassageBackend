@@ -61,4 +61,19 @@ class OrderRepository implements OrderContract
         $order->delete();
         return $order;
     }
+
+    public function getOrdersByDateRange($startDate, $endDate = null)
+    {
+        return Order::whereHas('appointment', function ($query) use ($startDate, $endDate) {
+                $query->whereDate('booking_time', '>=', $startDate);
+                if ($endDate) {
+                    $query->whereDate('booking_time', '<=', $endDate);
+                }
+            })
+            ->with('payment')
+            ->with('appointment.services', function ($query) {
+                $query->withTrashed();
+            })
+            ->get();
+    }
 }

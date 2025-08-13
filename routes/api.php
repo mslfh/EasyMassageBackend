@@ -139,6 +139,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/getStaffScheduleStatistics', [ScheduleController::class, 'getStaffScheduleStatistics']);
 
     Route::get('/getAnalyticsStatistics', [ServiceAppointmentController::class, 'getAnalyticsStatistics']);
+    Route::get('/getSalesStatistics', [OrderController::class, 'getSalesStatistics']);
 
     //notification
     Route::get('/getNotification', [NotificationController::class, 'getNotification']);

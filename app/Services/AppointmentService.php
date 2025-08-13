@@ -418,6 +418,31 @@ class AppointmentService
 
     public function updateAppointmentWithService($id, $appointmentData, $inputService, $staff)
     {
+        $user = $this->userService->findByField(
+            [
+                'search' => $appointmentData['customer_phone'],
+                'field' => 'phone',
+                'fuzzy' => false
+            ]
+        );
+        if ($user->isEmpty()) {
+            $user = $this->userService->createUser(
+                [
+                    'name' => $appointmentData['customer_first_name'] . ' ' . $appointmentData['customer_last_name'],
+                    'first_name' => $appointmentData['customer_first_name'],
+                    'last_name' => $appointmentData['customer_last_name'],
+                    'phone' => $appointmentData['customer_phone'],
+                    'email' => $appointmentData['customer_email'] ?? '',
+                ]
+            );
+        } else {
+            $user = $user->first();
+            $user->name = $appointmentData['customer_name'];
+            $user->first_name = $appointmentData['customer_first_name'];
+            $user->last_name = $appointmentData['customer_last_name'];
+            $user->save();
+        }
+
         $serviceData = [];
         $appointment = $this->getAppointmentById($id);
         $booking_time = null;
