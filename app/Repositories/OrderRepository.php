@@ -15,21 +15,21 @@ class OrderRepository implements OrderContract
     public function getOrderByAppointment($appointmentId)
     {
         return Order::where('appointment_id', '=', $appointmentId)
-        ->first();
+            ->first();
     }
 
     public function getOrderById($id)
     {
-        return Order::where('id','=',$id)
-        ->with('payment')
-        ->with('appointment.services')
-        ->first();
+        return Order::where('id', '=', $id)
+            ->with('payment')
+            ->with('appointment.services')
+            ->first();
     }
 
     public function createOrder(array $data)
     {
         $order = Order::create($data);
-        if(isset($data['payment'])) {
+        if (isset($data['payment'])) {
             foreach ($data['payment'] as $key => $value) {
                 $data['payment'][$key]['order_id'] = $order->id;
             }
@@ -42,14 +42,13 @@ class OrderRepository implements OrderContract
     {
         $order = Order::findOrFail($id);
         $order->update($data);
-        if(isset($data['payment'])) {
+        if (isset($data['payment'])) {
             foreach ($data['payment'] as $key => $value) {
                 $data['payment'][$key]['order_id'] = $order->id;
             }
             $order->payment()->delete();
             $order->payment()->createMany($data['payment']);
-        }
-        else{
+        } else {
             $order->payment()->delete();
         }
         return $order;
@@ -65,11 +64,13 @@ class OrderRepository implements OrderContract
     public function getOrdersByDateRange($startDate, $endDate = null)
     {
         return Order::whereHas('appointment', function ($query) use ($startDate, $endDate) {
-                $query->whereDate('booking_time', '>=', $startDate);
-                if ($endDate) {
-                    $query->whereDate('booking_time', '<=', $endDate);
-                }
-            })
+            if (!$endDate) {
+                $query->whereDate('booking_time', '=', $startDate);
+            } else {
+                $query->whereDate('booking_time', '>=', $startDate)
+                    ->whereDate('booking_time', '<=', $endDate);
+            }
+        })
             ->with('payment')
             ->with('appointment.services', function ($query) {
                 $query->withTrashed();

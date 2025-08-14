@@ -208,27 +208,60 @@ class OrderService
             $startDate = Carbon::today();
         }
         $orders = $this->orderRepository->getOrdersByDateRange($startDate, $endDate);
-        $sales = [
-            'type' => '',
+        $sales['service'] = [
+            'sales_qty' => 0,
+            'pricing_fees' => 0, // Total fees for all services
+            'receivable_fees' => 0, // Total amount expected to be received
+            'payments_collected' => 0, // Total amount actually received
+        ];
+        $sales['no_show'] = [
+            'sales_qty' => 0,
+            'pricing_fees' => 0,
+            'receivable_fees' => 0,
+            'payments_collected' => 0,
+        ];
+        $sales['cancelled'] = [
+            'sales_qty' => 0,
+            'pricing_fees' => 0,
+            'receivable_fees' => 0,
+            'payments_collected' => 0,
+        ];
+        $sales['voucher'] = [
             'sales_qty' => 0,
             'pricing_fees' => 0,
             'receivable_fees' => 0,
             'payments_collected' => 0,
         ];
         $servicesMismatch = [];
+        $amountGroupedByPaymentMethod = [];
+
 
         foreach ($orders as $order) {
-            $pricing_fees = $order->appointment->services->sum('service_price');
-            $sales['type'] = 'Service';
-            $sales['sales_qty'] += 1;
-            $sales['pricing_fees'] += $pricing_fees;
-            $sales['receivable_fees'] += $order->total_amount;
-            $sales['payments_collected'] += $order->paid_amount;
-
-            if($pricing_fees != $order->total_amount) {
+            $service = $order->appointment->services->first();
+            if (!$service) {
+                continue;
+            }
+            if ($order->appointment->type == 'no_show') {
+                $sales['no_show']['sales_qty'] += 1;
+                $sales['no_show']['pricing_fees'] += $service->service_price;
+                $sales['no_show']['receivable_fees'] += $order->total_amount;
+                $sales['no_show']['payments_collected'] += $order->paid_amount;
+            } else if ($order->appointment->status == 'cancelled') {
+                $sales['cancelled']['sales_qty'] += 1;
+                $sales['cancelled']['pricing_fees'] += $service->service_price;
+                $sales['cancelled']['receivable_fees'] += $order->total_amount;
+                $sales['cancelled']['payments_collected'] += $order->paid_amount;
+            } else {
+                $sales['service']['sales_qty'] += 1;
+                $sales['service']['pricing_fees'] += $service->service_price;
+                $sales['service']['receivable_fees'] += $order->total_amount;
+                $sales['service']['payments_collected'] += $order->paid_amount;
+            }
+            if ($service->service_price != $order->total_amount) {
                 $servicesMismatch[] = [
                     'appointment_id' => $order->appointment_id,
-                    'pricing_fees' => $pricing_fees,
+                    'customer_name' => $service->customer_name,
+                    'pricing_fees' => $service->service_price,
                     'total_amount' => $order->total_amount,
                     'booking_time' => $order->appointment->booking_time,
                     'service_title' => $order->appointment->services->first()->service_title ?? 'N/A',
@@ -236,10 +269,51 @@ class OrderService
                     'duration' => $order->appointment->services->first()->service_duration ?? 'N/A',
                 ];
             }
+
+            if (!isset($order->payment_method)) {
+                continue;
+            }
+            $paymentMethod = $order->payment_method;
+            if ($paymentMethod == 'split_payment') {
+                $splitPayments = $order->payment()->get();
+                foreach ($splitPayments as $splitPayment) {
+                    $paymentMethod = $splitPayment->paid_by;
+                    if (!isset($amountGroupedByPaymentMethod[$paymentMethod])) {
+                        if ($splitPayment->paid_by === 'unpaid') {
+                            $amountGroupedByPaymentMethod[$paymentMethod] = (float) number_format($splitPayment->total_amount, 2, '.', '');
+                        } else {
+                            $amountGroupedByPaymentMethod[$paymentMethod] = (float) number_format($splitPayment->paid_amount, 2, '.', '');
+                        }
+                    } else {
+                        if ($splitPayment->paid_by === 'unpaid') {
+                            $amountGroupedByPaymentMethod[$paymentMethod] += (float) number_format($splitPayment->total_amount, 2, '.', '');
+                        } else {
+                            $amountGroupedByPaymentMethod[$paymentMethod] += (float) number_format($splitPayment->paid_amount, 2, '.', '');
+                        }
+                        $amountGroupedByPaymentMethod[$paymentMethod] = (float) number_format($amountGroupedByPaymentMethod[$paymentMethod], 2, '.', '');
+                    }
+                }
+            } else {
+                if (!isset($amountGroupedByPaymentMethod[$paymentMethod])) {
+                    if ($order->payment_method === 'unpaid') {
+                        $amountGroupedByPaymentMethod[$paymentMethod] = (float) number_format($order->total_amount, 2, '.', '');
+                    } else {
+                        $amountGroupedByPaymentMethod[$paymentMethod] = (float) number_format($order->paid_amount, 2, '.', '');
+                    }
+                } else {
+                    if ($order->payment_method === 'unpaid') {
+                        $amountGroupedByPaymentMethod[$paymentMethod] += (float) number_format($order->total_amount, 2, '.', '');
+                    } else {
+                        $amountGroupedByPaymentMethod[$paymentMethod] += (float) number_format($order->paid_amount, 2, '.', '');
+                    }
+                    $amountGroupedByPaymentMethod[$paymentMethod] = (float) number_format($amountGroupedByPaymentMethod[$paymentMethod], 2, '.', '');
+                }
+            }
         }
         return [
             'sales' => $sales,
-            'servicesMismatch' => $servicesMismatch
+            'servicesMismatch' => $servicesMismatch,
+            'amountGroupedByPaymentMethod' => $amountGroupedByPaymentMethod
         ];
     }
 }
