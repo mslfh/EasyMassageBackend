@@ -18,7 +18,7 @@ class AppointmentRepository implements AppointmentContract
         ->whereNot(
             'status',
             'cancelled'
-        )->with('services')->orderBy('booking_time')->get();
+        )->with('services')->with('order')->orderBy('booking_time')->get();
     }
 
     public function getStatisticsByDate($beginDate, $endDate= null)

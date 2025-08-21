@@ -30,7 +30,8 @@ class OrderService
 
     public function getOrderById($id)
     {
-        return $this->orderRepository->getOrderById($id);
+        $order =  $this->orderRepository->getOrderById($id);
+        return $order;
     }
 
     public function getOrderByAppointment($appointmentId)
@@ -109,7 +110,6 @@ class OrderService
         } else {
             $data['payment_status'] = 'paid';
         }
-
         DB::beginTransaction();
 
         try {

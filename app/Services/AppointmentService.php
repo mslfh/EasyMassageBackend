@@ -397,6 +397,7 @@ class AppointmentService
                     'service_title' => $service->service_title,
                     'service_duration' => $service->service_duration,
                     'service_price' => $service->service_price,
+                    'effective_price' => $appointment->effective_price,
                     'comments' => $appointment->comments,
                     'appointment_id' => $appointment->id,
                     'customer_id' => $appointment->customer_id,
