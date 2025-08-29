@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('description')->nullable();
             $table->integer('duration')->nullable();
             $table->string('status')->default('active');
+            $table->boolean('is_viewable')->default(false);
             $table->double('price');
             $table->timestamps();
         });

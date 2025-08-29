@@ -39,6 +39,9 @@ class ServiceRepository implements ServiceContract
 
     public function getServiceByPackage($packageId)
     {
-        return Service::where('package_id', $packageId)->get();
+        return Service::where('package_id', $packageId)
+        ->where('is_viewable', true)
+
+        ->get();
     }
 }

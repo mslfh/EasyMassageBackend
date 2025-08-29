@@ -14,7 +14,12 @@ class PackageRepository implements PackageContract
 
     public function getPackageWithService()
     {
-        return Package::with('services')->get();
+        return Package::with([
+            'services' => function ($query) {
+                $query->where('status', 'active')
+                    ->where('is_viewable', true);
+            }
+        ])->get();
     }
 
     public function findById($id)

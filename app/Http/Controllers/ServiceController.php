@@ -43,6 +43,7 @@ class ServiceController extends BaseController
             'duration' => 'nullable|integer',
             'status' => 'required|string',
             'price' => 'required|numeric',
+            'is_viewable' => 'required|boolean',
         ]);
 
         $service = Service::create($validated);
@@ -70,6 +71,7 @@ class ServiceController extends BaseController
             'duration' => 'nullable|integer',
             'status' => 'sometimes|string',
             'price' => 'sometimes|numeric',
+            'is_viewable' => 'sometimes|boolean',
         ]);
 
         $service->update($validated);
